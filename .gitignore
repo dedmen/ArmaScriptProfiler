@@ -31,3 +31,7 @@
 *.out
 *.app
 /vcproj/*
+/src/ArmaScriptProfiler/x64
+.vs
+/src/ArmaScriptProfiler/Release
+/src/ArmaScriptProfiler/Debug
