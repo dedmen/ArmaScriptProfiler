@@ -70,17 +70,17 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)..\..\release\@ArmaScriptProfiler\intercept\</OutDir>
+    <OutDir>$(SolutionDir)..\release\@ArmaScriptProfiler\intercept\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)..\..\release\@ArmaScriptProfiler\intercept\</OutDir>
+    <OutDir>$(SolutionDir)..\release\@ArmaScriptProfiler\intercept\</OutDir>
     <TargetName>$(ProjectName)_x64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)..\..\release\@ArmaScriptProfiler\intercept\</OutDir>
+    <OutDir>$(SolutionDir)..\release\@ArmaScriptProfiler\intercept\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)..\..\release\@ArmaScriptProfiler\intercept\</OutDir>
+    <OutDir>$(SolutionDir)..\release\@ArmaScriptProfiler\intercept\</OutDir>
     <TargetName>$(ProjectName)_x64</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -88,7 +88,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Intercept\src\client\headers;$(SolutionDir)..\..\Intercept\src\client\headers\client;$(SolutionDir)..\..\Intercept\src\client\headers\shared;$(SolutionDir)..\..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\..\Intercept\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
@@ -100,7 +100,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Intercept\src\client\headers;$(SolutionDir)..\..\Intercept\src\client\headers\client;$(SolutionDir)..\..\Intercept\src\client\headers\shared;$(SolutionDir)..\..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\..\Intercept\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
@@ -114,7 +114,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Intercept\src\client\headers;$(SolutionDir)..\..\Intercept\src\client\headers\client;$(SolutionDir)..\..\Intercept\src\client\headers\shared;$(SolutionDir)..\..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\..\Intercept\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
@@ -136,7 +136,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\Intercept\src\client\headers;$(SolutionDir)..\..\Intercept\src\client\headers\client;$(SolutionDir)..\..\Intercept\src\client\headers\shared;$(SolutionDir)..\..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\..\Intercept\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
@@ -155,41 +155,41 @@
     <ClInclude Include="scriptProfiler.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\client.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\eventhandlers.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\pointers.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\actions.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\ai.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\camera.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\cargo.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\chat.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\common_helpers.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\config.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\core.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\ctrl.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\curator.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\debug.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\deprecated.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\eden.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\group.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\hc.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\intersects.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\inventory.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\marker.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\misc.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\multiplayer.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\position.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\rotorlib.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\sound.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\tasks.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\uncategorized.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\units.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\vehicles.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\waypoint.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\world.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\shared\client_types.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\shared\pool.cpp" />
-    <ClCompile Include="..\..\intercept\src\client\intercept\shared\types.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\client.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\eventhandlers.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\pointers.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\actions.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\ai.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\camera.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\cargo.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\chat.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\common_helpers.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\config.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\core.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\ctrl.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\curator.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\debug.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\deprecated.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\eden.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\group.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\hc.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\intersects.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\inventory.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\marker.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\misc.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\multiplayer.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\position.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\rotorlib.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\sound.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\tasks.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\uncategorized.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\units.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\vehicles.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\waypoint.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\client\sqf\world.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\shared\client_types.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\shared\pool.cpp" />
+    <ClCompile Include="..\intercept\src\client\intercept\shared\types.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="scriptProfiler.cpp" />
   </ItemGroup>

@@ -118,8 +118,9 @@ game_value profilerLog(game_value message) {
     return {};
 }
 
-r_string addScopeToScript(r_string str) {
-    if (str.empty() || str.front() == '[' && *(str.begin() + str.length() - 1) == ']') return str;
+game_value compileRedirect(game_value message) {
+    r_string str = message;
+    if (str.empty() || str.front() == '[' && *(str.begin() + str.length() - 1) == ']') return sqf::compile(str);
     if (str.find("createProfileScope", 0) == -1) {
         if (str.find("#line", 0) != -1) {
             auto offs = str.find("#line", 0);
@@ -150,19 +151,12 @@ r_string addScopeToScript(r_string str) {
         }
 
     }
-    return str;
+    return sqf::compile(str);
 }
 
 
-game_value compileRedirect(game_value message) {
-    return sqf::compile(addScopeToScript(message));
-}
 
-game_value compileFinalRedirect(game_value message) {
-    return sqf::compile_final(addScopeToScript(message));
-}
-
-scriptProfiler::scriptProfiler() {}
+scriptProfiler::scriptProfiler() { frames.resize(framesToGo + 1); }
 
 
 scriptProfiler::~scriptProfiler() {}
@@ -174,13 +168,13 @@ void scriptProfiler::preStart() {
     static auto _createProfileScope = client::host::registerFunction("createProfileScope", "Creates a ProfileScope", userFunctionWrapper<createProfileScope>, codeType.first, GameDataType::STRING);
     static auto _profilerSleep = client::host::registerFunction("profilerBlockingSleep", "Pauses the engine for 17ms. Used for testing.", userFunctionWrapper<profilerSleep>, GameDataType::NOTHING);
     static auto _profilerCaptureFrame = client::host::registerFunction("profilerCaptureFrame", "Captures the next frame", userFunctionWrapper<profilerCaptureFrame>, GameDataType::NOTHING);
-    static auto _profilerCaptureFrames = client::host::registerFunction("profilerCaptureFrames", "Captures the next N frames", userFunctionWrapper<profilerCaptureFrames>, GameDataType::NOTHING, GameDataType::SCALAR);
+    static auto _profilerCaptureFrames = client::host::registerFunction("profilerCaptureFrames", "Captures the next frame", userFunctionWrapper<profilerCaptureFrames>, GameDataType::NOTHING, GameDataType::SCALAR);
     static auto _profilerCaptureSlowFrame = client::host::registerFunction("profilerCaptureSlowFrame", "Captures the first frame that hits the threshold in ms", userFunctionWrapper<profilerCaptureSlowFrame>, GameDataType::NOTHING, GameDataType::SCALAR);
     static auto _profilerCaptureTrigger = client::host::registerFunction("profilerCaptureTrigger", "Starts recording and captures the frame that contains a trigger", userFunctionWrapper<profilerCaptureTrigger>, GameDataType::NOTHING);
     static auto _profilerTrigger = client::host::registerFunction("profilerTrigger", "Trigger", userFunctionWrapper<profilerTrigger>, GameDataType::NOTHING);
     static auto _profilerLog = client::host::registerFunction("profilerLog", "Logs message to capture", userFunctionWrapper<profilerLog>, GameDataType::NOTHING, GameDataType::STRING);
     static auto _profilerCompile = client::host::registerFunction("compile", "Profiler redirect", userFunctionWrapper<compileRedirect>, GameDataType::CODE, GameDataType::STRING);
-    static auto _profilerCompileF = client::host::registerFunction("compileFinal", "Profiler redirect", userFunctionWrapper<compileFinalRedirect>, GameDataType::CODE, GameDataType::STRING);
+    static auto _profilerCompileF = client::host::registerFunction("compileFinal", "Profiler redirect", userFunctionWrapper<compileRedirect>, GameDataType::CODE, GameDataType::STRING);
 }
 
 client::EHIdentifierHandle endFrameHandle;
@@ -195,7 +189,6 @@ void scriptProfiler::preInit() {
         }
         if (triggerMode) {
             frameStart = std::chrono::high_resolution_clock::now();
-            frames.clear();
             frames.clear(); //#TODO recursive...
             frames.resize(framesToGo + 1);
         }
@@ -208,7 +201,7 @@ void scriptProfiler::preInit() {
             framesToGo--;
         }
     });
-    frames.push_back(frameData());
+    frames.resize(framesToGo + 1);
 }
 
 uint64_t scriptProfiler::startNewScope() {

@@ -7,9 +7,9 @@ int __cdecl intercept::api_version() {
     return 1;
 }
 
-bool __cdecl intercept::is_signed() {
-    return true;
-}
+//bool __cdecl intercept::is_signed() {
+//    return true;
+//}
 
 void __cdecl intercept::pre_start() {
     profiler.preStart();
