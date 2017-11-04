@@ -13,5 +13,135 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="intercept_client">
+      <UniqueIdentifier>{ef8e50da-87b6-4d3b-8595-4a0fd74a03e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="intercept_client\shared">
+      <UniqueIdentifier>{e3e75952-5e85-4fe4-8e2d-a10639c6bd07}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="intercept_client\client">
+      <UniqueIdentifier>{910ac9cd-a800-453d-8a7d-fb0a482e7ae9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="intercept_client\client\sqf">
+      <UniqueIdentifier>{240a3cf6-839f-4abd-a695-fcd5237618d6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="scriptProfiler.hpp">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="scriptProfiler.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\shared\client_types.cpp">
+      <Filter>intercept_client\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\shared\pool.cpp">
+      <Filter>intercept_client\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\shared\types.cpp">
+      <Filter>intercept_client\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\client.cpp">
+      <Filter>intercept_client\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\eventhandlers.cpp">
+      <Filter>intercept_client\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\pointers.cpp">
+      <Filter>intercept_client\client</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\actions.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\ai.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\camera.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\cargo.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\chat.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\common_helpers.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\config.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\core.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\ctrl.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\curator.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\debug.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\deprecated.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\eden.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\group.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\hc.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\intersects.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\inventory.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\marker.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\misc.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\multiplayer.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\position.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\rotorlib.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\sound.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\tasks.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\uncategorized.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\units.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\vehicles.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\waypoint.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\intercept\src\client\intercept\client\sqf\world.cpp">
+      <Filter>intercept_client\client\sqf</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
