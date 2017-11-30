@@ -18,7 +18,7 @@ class CfgPatches
 class Intercept {
     class Dedmen {
         class ArmaScriptProfiler {
-			certificate = "core";
+			certificate = "\z\armascriptprofiler\addons\main\dummycert";
             pluginName = "ArmaScriptProfiler";
         };
     };
