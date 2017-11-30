@@ -14,14 +14,14 @@ public:
     public:
         scopeData(r_string _name,
             std::chrono::high_resolution_clock::time_point _start,
-            uint64_t _scopeID) : name(_name), start(_start), scopeID(_scopeID) {
+            uint64_t _scopeID) : name(std::move(_name)), start(_start), scopeID(_scopeID) {
 
         }
         ~scopeData() {
             if (scopeID == -1) return;
             auto timeDiff = std::chrono::high_resolution_clock::now() - start;
             auto runtime = std::chrono::duration_cast<chrono::microseconds>(timeDiff);
-            profiler.endScope(scopeID, name, runtime);
+            profiler.endScope(scopeID, std::move(name), runtime);
         }
 
         r_string name;
@@ -63,26 +63,26 @@ game_data* createGameDataProfileScope(param_archive* ar) {
     return x;
 }
 
-game_value createProfileScope(game_value name) {
+game_value createProfileScope(uintptr_t, game_value_parameter name) {
     if (sqf::can_suspend()) return {};
     auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(), profiler.startNewScope());
 
     return game_value(new GameDataProfileScope(std::move(data)));
 }
 
-game_value profilerSleep() {
+game_value profilerSleep(uintptr_t) {
     std::this_thread::sleep_for(17ms);
     return {};
 }
 
-game_value profilerCaptureFrame() {
+game_value profilerCaptureFrame(uintptr_t) {
     profiler.profileStartFrame = sqf::diag_frameno();
     profiler.shouldRecord = true;
     profiler.forceCapture = true;
     return {};
 }
 
-game_value profilerCaptureFrames(game_value count) {
+game_value profilerCaptureFrames(uintptr_t, game_value_parameter count) {
     profiler.profileStartFrame = sqf::diag_frameno();
     profiler.shouldRecord = true;
     profiler.forceCapture = true;
@@ -91,34 +91,34 @@ game_value profilerCaptureFrames(game_value count) {
     return {};
 }
 
-game_value profilerCaptureSlowFrame(game_value threshold) {
+game_value profilerCaptureSlowFrame(uintptr_t, game_value_parameter threshold) {
     profiler.shouldRecord = true;
     profiler.slowCheck = chrono::milliseconds(static_cast<float>(threshold));
     profiler.triggerMode = true;
     return {};
 }
 
-game_value profilerCaptureTrigger() {
+game_value profilerCaptureTrigger(uintptr_t) {
     profiler.shouldRecord = true;
     profiler.trigger = false;
     profiler.triggerMode = true;
     return {};
 }
 
-game_value profilerTrigger() {
+game_value profilerTrigger(uintptr_t) {
     profiler.trigger = true;
     return {};
 }
 
 
-game_value profilerLog(game_value message) {
+game_value profilerLog(uintptr_t, game_value_parameter message) {
     if (profiler.shouldRecord) {
         profiler.addLog(message);
     }
     return {};
 }
 
-game_value compileRedirect(game_value message) {
+game_value compileRedirect(uintptr_t, game_value_parameter message) {
     r_string str = message;
     if (str.empty() || str.front() == '[' && *(str.begin() + str.length() - 1) == ']') return sqf::compile(str);
     if (str.find("createProfileScope", 0) == -1) {
@@ -165,16 +165,16 @@ scriptProfiler::~scriptProfiler() {}
 void scriptProfiler::preStart() {
     auto codeType = client::host::registerType("ProfileScope"sv, "ProfileScope"sv, "Dis is a profile scope. It profiles things."sv, "ProfileScope"sv, createGameDataProfileScope);
     GameDataProfileScope_type = codeType.second;
-    static auto _createProfileScope = client::host::registerFunction("createProfileScope", "Creates a ProfileScope", userFunctionWrapper<createProfileScope>, codeType.first, GameDataType::STRING);
-    static auto _profilerSleep = client::host::registerFunction("profilerBlockingSleep", "Pauses the engine for 17ms. Used for testing.", userFunctionWrapper<profilerSleep>, GameDataType::NOTHING);
-    static auto _profilerCaptureFrame = client::host::registerFunction("profilerCaptureFrame", "Captures the next frame", userFunctionWrapper<profilerCaptureFrame>, GameDataType::NOTHING);
-    static auto _profilerCaptureFrames = client::host::registerFunction("profilerCaptureFrames", "Captures the next frame", userFunctionWrapper<profilerCaptureFrames>, GameDataType::NOTHING, GameDataType::SCALAR);
-    static auto _profilerCaptureSlowFrame = client::host::registerFunction("profilerCaptureSlowFrame", "Captures the first frame that hits the threshold in ms", userFunctionWrapper<profilerCaptureSlowFrame>, GameDataType::NOTHING, GameDataType::SCALAR);
-    static auto _profilerCaptureTrigger = client::host::registerFunction("profilerCaptureTrigger", "Starts recording and captures the frame that contains a trigger", userFunctionWrapper<profilerCaptureTrigger>, GameDataType::NOTHING);
-    static auto _profilerTrigger = client::host::registerFunction("profilerTrigger", "Trigger", userFunctionWrapper<profilerTrigger>, GameDataType::NOTHING);
-    static auto _profilerLog = client::host::registerFunction("profilerLog", "Logs message to capture", userFunctionWrapper<profilerLog>, GameDataType::NOTHING, GameDataType::STRING);
-    static auto _profilerCompile = client::host::registerFunction("compile", "Profiler redirect", userFunctionWrapper<compileRedirect>, GameDataType::CODE, GameDataType::STRING);
-    static auto _profilerCompileF = client::host::registerFunction("compileFinal", "Profiler redirect", userFunctionWrapper<compileRedirect>, GameDataType::CODE, GameDataType::STRING);
+    static auto _createProfileScope = client::host::registerFunction("createProfileScope", "Creates a ProfileScope", createProfileScope, codeType.first, GameDataType::STRING);
+    static auto _profilerSleep = client::host::registerFunction("profilerBlockingSleep", "Pauses the engine for 17ms. Used for testing.", profilerSleep, GameDataType::NOTHING);
+    static auto _profilerCaptureFrame = client::host::registerFunction("profilerCaptureFrame", "Captures the next frame", profilerCaptureFrame, GameDataType::NOTHING);
+    static auto _profilerCaptureFrames = client::host::registerFunction("profilerCaptureFrames", "Captures the next frame", profilerCaptureFrames, GameDataType::NOTHING, GameDataType::SCALAR);
+    static auto _profilerCaptureSlowFrame = client::host::registerFunction("profilerCaptureSlowFrame", "Captures the first frame that hits the threshold in ms", profilerCaptureSlowFrame, GameDataType::NOTHING, GameDataType::SCALAR);
+    static auto _profilerCaptureTrigger = client::host::registerFunction("profilerCaptureTrigger", "Starts recording and captures the frame that contains a trigger", profilerCaptureTrigger, GameDataType::NOTHING);
+    static auto _profilerTrigger = client::host::registerFunction("profilerTrigger", "Trigger", profilerTrigger, GameDataType::NOTHING);
+    static auto _profilerLog = client::host::registerFunction("profilerLog", "Logs message to capture", profilerLog, GameDataType::NOTHING, GameDataType::STRING);
+    static auto _profilerCompile = client::host::registerFunction("compile", "Profiler redirect", compileRedirect, GameDataType::CODE, GameDataType::STRING);
+    static auto _profilerCompileF = client::host::registerFunction("compileFinal", "Profiler redirect", compileRedirect, GameDataType::CODE, GameDataType::STRING);
 }
 
 client::EHIdentifierHandle endFrameHandle;
@@ -219,7 +219,7 @@ uint64_t scriptProfiler::startNewScope() {
     return newScopeID;
 }
 
-void scriptProfiler::endScope(uint64_t scopeID, intercept::types::r_string name, chrono::microseconds runtime) {
+void scriptProfiler::endScope(uint64_t scopeID, intercept::types::r_string&& name, chrono::microseconds runtime) {
     if (!shouldRecord) return;
     auto& scope = frames[currentFrame].scopes[scopeID];
     scope->name = name;
@@ -243,11 +243,11 @@ void scriptProfiler::endScope(uint64_t scopeID, intercept::types::r_string name,
 void scriptProfiler::addLog(intercept::types::r_string msg) {
     auto newLog = std::make_shared<profileLog>(msg);
     if (currentScope) {
-        currentScope->subelements.push_back(newLog);
+        currentScope->subelements.emplace_back(std::move(newLog));
         newLog->parent = currentScope;
         //currentScope->runtime -= chrono::microseconds(1.5); //try to compensate the calltime for log command
     } else {
-        frames[currentFrame].elements.push_back(newLog);
+        frames[currentFrame].elements.push_back(std::move(newLog));
     }
 }
 
@@ -286,7 +286,7 @@ intercept::types::r_string scriptProfiler::generateLog() {
     std::stringstream output;
     auto baseTimeReference = frameStart;
     chrono::milliseconds totalRuntime = std::chrono::duration_cast<chrono::milliseconds>(std::chrono::high_resolution_clock::now() - baseTimeReference);
-    output.precision(5);
+    output.precision(4);
     output << "* THREAD! YEAH!\n";
     output << std::fixed << "total; " << 0.0 << "; " << totalRuntime.count() << ";\"Frame " << sqf::diag_frameno() << "\"\n";
 

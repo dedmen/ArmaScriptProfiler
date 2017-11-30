@@ -38,9 +38,6 @@
     <ClCompile Include="..\intercept\src\client\intercept\shared\client_types.cpp">
       <Filter>intercept_client\shared</Filter>
     </ClCompile>
-    <ClCompile Include="..\intercept\src\client\intercept\shared\pool.cpp">
-      <Filter>intercept_client\shared</Filter>
-    </ClCompile>
     <ClCompile Include="..\intercept\src\client\intercept\shared\types.cpp">
       <Filter>intercept_client\shared</Filter>
     </ClCompile>

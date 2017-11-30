@@ -188,7 +188,6 @@
     <ClCompile Include="..\intercept\src\client\intercept\client\sqf\waypoint.cpp" />
     <ClCompile Include="..\intercept\src\client\intercept\client\sqf\world.cpp" />
     <ClCompile Include="..\intercept\src\client\intercept\shared\client_types.cpp" />
-    <ClCompile Include="..\intercept\src\client\intercept\shared\pool.cpp" />
     <ClCompile Include="..\intercept\src\client\intercept\shared\types.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="scriptProfiler.cpp" />

@@ -68,7 +68,7 @@ public:
     void preInit();
     //Starts new scope and returns it's assigned scopeID
     uint64_t startNewScope();
-    void endScope(uint64_t scopeID, intercept::types::r_string name, chrono::microseconds runtime);
+    void endScope(uint64_t scopeID, intercept::types::r_string&& name, chrono::microseconds runtime);
     void addLog(intercept::types::r_string msg);
     void iterateElementTree(const frameData& frame, std::function<void(profileElement*, size_t)>);
     intercept::types::r_string generateLog();
@@ -88,10 +88,10 @@ public:
     bool shouldRecord = false;
     chrono::milliseconds slowCheck{ 0 };
     std::chrono::high_resolution_clock::time_point frameStart;
-    bool waitingForCapture;
-    float profileStartFrame;
+    bool waitingForCapture = false;
+    float profileStartFrame = false;
     bool isRecording = false;
-    bool trigger;
+    bool trigger = false;
     bool triggerMode = false;
 };
 
