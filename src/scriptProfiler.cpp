@@ -130,10 +130,15 @@ game_value compileRedirect(uintptr_t, game_value_parameter message) {
         } else {
             if (str.find("scriptname", 0) != -1) __debugbreak();
             auto linebreak = str.find("\n", 0);
+            if (linebreak < 20) {
+                auto linebreak2 = str.find("\n", linebreak);
+                if (linebreak2 > linebreak) linebreak = linebreak2;
+            }
             if (linebreak != -1) {
                 auto name = std::string(str.begin(), linebreak);
                 std::transform(name.begin(), name.end(), name.begin(), [](char ch) {
                     if (ch == '"') return '\'';
+                    if (ch == '\n') return ' ';
                     return ch;
                 });
                 str = r_string("private _scoooope = createProfileScope \""sv) + name + "\"; "sv + str;
