@@ -63,6 +63,10 @@ game_data* createGameDataProfileScope(param_archive* ar) {
     return x;
 }
 
+
+
+
+
 game_value createProfileScope(uintptr_t, game_value_parameter name) {
     if (sqf::can_suspend()) return {};
     auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(), profiler.startNewScope());
@@ -246,13 +250,13 @@ void scriptProfiler::endScope(uint64_t scopeID, intercept::types::r_string&& nam
 }
 
 void scriptProfiler::addLog(intercept::types::r_string msg) {
-    auto newLog = std::make_shared<profileLog>(msg);
+    auto newLog = std::make_shared<profileLog>(std::move(msg));
     if (currentScope) {
-        currentScope->subelements.emplace_back(std::move(newLog));
         newLog->parent = currentScope;
+        currentScope->subelements.emplace_back(std::move(newLog));
         //currentScope->runtime -= chrono::microseconds(1.5); //try to compensate the calltime for log command
     } else {
-        frames[currentFrame].elements.push_back(std::move(newLog));
+        frames[currentFrame].elements.emplace_back(std::move(newLog));
     }
 }
 
@@ -384,4 +388,23 @@ void scriptProfiler::capture() {
         triggerMode = false;
     }
     waitingForCapture = false;
+}
+
+
+
+
+class ArmaScriptProfiler_ProfInterface {
+public:
+    virtual game_value createScope(r_string name) {
+        auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(), profiler.startNewScope());
+
+        return game_value(new GameDataProfileScope(std::move(data)));
+    }
+};
+
+static ArmaScriptProfiler_ProfInterface profIface;
+
+
+void scriptProfiler::registerInterfaces() {
+    client::host::register_plugin_interface("ArmaScriptProfilerProfIFace"sv, 1, &profIface);
 }

@@ -11,6 +11,10 @@ int __cdecl intercept::api_version() {
 //    return true;
 //}
 
+void intercept::register_interfaces() {
+    profiler.registerInterfaces();
+}
+
 void __cdecl intercept::pre_start() {
     profiler.preStart();
 }

@@ -47,7 +47,7 @@ public:
 
 class profileLog : public profileElement {
 public:
-    explicit profileLog(intercept::types::r_string _message) : profileElement(profileElementType::log), message(_message) {}
+    explicit profileLog(intercept::types::r_string&& _message) : profileElement(profileElementType::log), message(_message) {}
     ~profileLog() override {};
     intercept::types::r_string getAsString() override { return message; }
     chrono::microseconds getRunTime() override { return chrono::microseconds(0); }
@@ -76,6 +76,7 @@ public:
     chrono::milliseconds totalScriptRuntime();
     bool shouldCapture();
     void capture();
+    void registerInterfaces();
 
 
     std::vector<frameData> frames;

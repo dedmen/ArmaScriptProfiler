@@ -140,5 +140,8 @@
     <ClCompile Include="main.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="..\intercept\src\client\intercept\shared\containers.cpp">
+      <Filter>intercept_client\shared</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
