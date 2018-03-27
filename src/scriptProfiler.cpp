@@ -354,16 +354,32 @@ uint32_t getRandColor() {
 
 
 game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
+	static r_string compileEventText("compile");
+	BROFILER_EVENT(compileEventText);
     game_state* state = reinterpret_cast<game_state*>(st);
     r_string str = message;
 
-    std::string scriptName = getScriptName(str, false);
+	auto comp = sqf::compile(str);
+	auto bodyCode = static_cast<game_data_code*>(comp.data.get());
+	if (!bodyCode->instructions) return comp;
+
+
+	std::string scriptName;
+
+	std::smatch m;
+	std::regex e(R"([xz]\\([^\\]*)\\addons\\([^\\]*)\\(?:functions\\)?fnc?_([^.]*)\.sqf)");   // matches words beginning by "sub"
+
+	auto funcPath = std::string(bodyCode->instructions->front()->sdp.sourcefile);
+	if (!funcPath.empty() && std::regex_search(funcPath , m, e)) {
+		scriptName = std::string(m[1]) + "__" + std::string(m[2]) + "_fnc_" + std::string(m[3]);
+	}
+
+
+
+	if (scriptName.empty()) scriptName = getScriptName(str, false);
     if (scriptName.empty()) scriptName = "<unknown>";
 
-    auto comp = sqf::compile(str);
 
-    auto bodyCode = static_cast<game_data_code*>(comp.data.get());
-    if (!bodyCode->instructions) return comp;
 
     //Insert instruction to set _x
     ref<GameInstructionProfileScopeStart> curElInstruction = rv_allocator<GameInstructionProfileScopeStart>::create_single();
