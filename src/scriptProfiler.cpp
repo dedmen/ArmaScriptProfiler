@@ -151,15 +151,15 @@ game_value profilerLog(uintptr_t, game_value_parameter message) {
     return {};
 }
   
-std::string getScriptName(const r_string& str) {
-    if (str.empty() || str.front() == '[' && *(str.begin() + str.length() - 1) == ']') return "";
+std::string getScriptName(const r_string& str, bool returnFirstLineIfNoName = true) {
+    if (str.empty() || str.front() == '[' && *(str.begin() + str.length() - 1) == ']') return "<unknown>";
     if (str.find("createProfileScope", 0) == -1) {
         if (str.find("#line", 0) != -1) {
             auto offs = str.find("#line", 0);
             auto length = str.find("\"", offs + 9) - offs - 9;
             auto name = std::string_view(str.data() + offs + 9, length);
             return std::string(name);
-        } else {
+        } else if (returnFirstLineIfNoName) {
             if (str.find("scriptname", 0) != -1) __debugbreak();
             auto linebreak = str.find("\n", 0);
             if (linebreak < 20) {
@@ -181,13 +181,12 @@ std::string getScriptName(const r_string& str) {
                     return ch;
                 });
                 return name;
-            } else
-                return "unknown";
+            }
             //OutputDebugStringA(str.data());
             //OutputDebugStringA("\n\n#######\n");
         }
     }
-    return "";
+    return "<unknown>";
 }
 
 game_value compileRedirect(uintptr_t st, game_value_parameter message) {
@@ -359,6 +358,10 @@ game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
     r_string str = message;
 
     std::string scriptName = getScriptName(str);
+    if (scriptName.empty()) scriptName = "<unknown>";
+    scriptName = scriptName.substr(0,64);
+    OutputDebugStringA(scriptName.c_str());
+
     auto comp = sqf::compile(str);
 
     auto bodyCode = static_cast<game_data_code*>(comp.data.get());
