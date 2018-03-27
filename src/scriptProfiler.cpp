@@ -354,8 +354,8 @@ uint32_t getRandColor() {
 
 
 game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
-	static r_string compileEventText("compile");
-	BROFILER_EVENT(compileEventText);
+	//static r_string compileEventText("compile");
+	//BROFILER_EVENT(compileEventText);
     game_state* state = reinterpret_cast<game_state*>(st);
     r_string str = message;
 
