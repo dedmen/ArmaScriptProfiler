@@ -1,6 +1,7 @@
 #pragma once
 #include <chrono>
 #include <client/headers/shared/types.hpp>
+#include <Brofiler.h>
 
 namespace chrono {
     using nanoseconds = std::chrono::duration<double, std::nano>;
@@ -86,6 +87,7 @@ public:
     uint64_t lastScopeID = 1;
     profileScope* currentScope = nullptr;
     bool forceCapture = false;
+    bool shouldBeRecording() const;
     bool shouldRecord = false;
     chrono::milliseconds slowCheck{ 0 };
     std::chrono::high_resolution_clock::time_point frameStart;

@@ -144,7 +144,7 @@ game_value profilerTrigger(uintptr_t) {
 }
 
 game_value profilerLog(uintptr_t, game_value_parameter message) {
-    if (profiler.shouldRecord) {
+    if (profiler.shouldBeRecording()) {
         profiler.addLog(message);
     }
     return {};
@@ -259,7 +259,7 @@ Brofiler::EventData* frameEvent = nullptr;
 
 void scriptProfiler::preInit() {
     endFrameHandle = client::addMissionEventHandler<client::eventhandlers_mission::Draw3D>([this]() {
-        if (shouldRecord && shouldCapture() && !framesToGo) { //We always want to log if a capture is ready don't we?
+        if (shouldBeRecording() && shouldCapture() && !framesToGo) { //We always want to log if a capture is ready don't we?
             if (currentScope == nullptr)
                 capture();
             else
@@ -270,7 +270,7 @@ void scriptProfiler::preInit() {
             frames.clear(); //#TODO recursive...
             frames.resize(framesToGo + 1);
         }
-        if (shouldRecord && !waitingForCapture && !isRecording) {//If we are waiting for capture don't clear everything
+        if (shouldBeRecording() && !waitingForCapture && !isRecording) {//If we are waiting for capture don't clear everything
             frameStart = std::chrono::high_resolution_clock::now();
             isRecording = true;
         }
@@ -291,7 +291,7 @@ void scriptProfiler::preInit() {
 }
 
 uint64_t scriptProfiler::startNewScope() {
-    if (!shouldRecord) return -1;
+    if (!shouldBeRecording()) return -1;
     auto newScopeID = lastScopeID++;
     auto newScope = std::make_shared<profileScope>(newScopeID);
     frames[currentFrame].scopes[newScopeID] = newScope;
@@ -306,7 +306,7 @@ uint64_t scriptProfiler::startNewScope() {
 }
 
 void scriptProfiler::endScope(uint64_t scopeID, intercept::types::r_string&& name, chrono::microseconds runtime) {
-    if (!shouldRecord) return;
+    if (!shouldBeRecording()) return;
     auto& scope = frames[currentFrame].scopes[scopeID];
     scope->name = name;
     scope->runtime += runtime;
@@ -484,4 +484,8 @@ static ArmaScriptProfiler_ProfInterface profIface;
 
 void scriptProfiler::registerInterfaces() {
     client::host::register_plugin_interface("ArmaScriptProfilerProfIFace"sv, 1, &profIface);
+}
+
+bool scriptProfiler::shouldBeRecording() const {
+    return shouldRecord || Brofiler::IsActive();
 }
