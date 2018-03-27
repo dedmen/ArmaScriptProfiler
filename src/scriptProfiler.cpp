@@ -214,7 +214,7 @@ game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
     ref<GameInstructionProfileScopeStart> curElInstruction = rv_allocator<GameInstructionProfileScopeStart>::create_single();
     curElInstruction->name = scriptName;
 	curElInstruction->sdp = bodyCode->instructions->front()->sdp;
-	curElInstruction->eventDescription = Brofiler::EventDescription::Create("scope",curElInstruction->sdp.sourcefile.c_str(),
+	curElInstruction->eventDescription = Brofiler::EventDescription::Create(curElInstruction->name.c_str(),curElInstruction->sdp.sourcefile.c_str(),
 			curElInstruction->sdp.sourceline);
 
 
