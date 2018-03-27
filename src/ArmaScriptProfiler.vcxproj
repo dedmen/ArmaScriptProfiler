@@ -158,6 +158,9 @@
     <ClCompile Include="..\brofiler\BrofilerCore\CallstackCollector.cpp" />
     <ClCompile Include="..\brofiler\BrofilerCore\Core.cpp">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)brofilercore.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)brofilercore.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)brofilercore.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)brofilercore.obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="..\brofiler\BrofilerCore\Event.cpp" />
     <ClCompile Include="..\brofiler\BrofilerCore\EventDescriptionBoard.cpp" />
