@@ -2,6 +2,7 @@
 #include <client/headers/intercept.hpp>
 #include <sstream>
 #include <numeric>
+#include <Brofiler.h>
 
 using namespace intercept;
 using namespace std::chrono_literals;
@@ -14,16 +15,19 @@ public:
     public:
         scopeData(r_string _name,
             std::chrono::high_resolution_clock::time_point _start,
-            uint64_t _scopeID) : name(std::move(_name)), start(_start), scopeID(_scopeID) {
+            uint64_t _scopeID, Brofiler::EventDescription* evtDscr = nullptr) : name(std::move(_name)), start(_start), scopeID(_scopeID) {
 
+            if (evtDscr)
+                evtDt = Brofiler::Event::Start(*evtDscr);
         }
         ~scopeData() {
             if (scopeID == -1) return;
             auto timeDiff = std::chrono::high_resolution_clock::now() - start;
             auto runtime = std::chrono::duration_cast<chrono::microseconds>(timeDiff);
             profiler.endScope(scopeID, std::move(name), runtime);
+			if (evtDt) Brofiler::Event::Stop(*evtDt);
         }
-
+		Brofiler::EventData* evtDt {nullptr};
         r_string name;
         std::chrono::high_resolution_clock::time_point start;
         uint64_t scopeID = -1;
@@ -68,6 +72,7 @@ game_data* createGameDataProfileScope(param_archive* ar) {
 class GameInstructionProfileScopeStart : public game_instruction {
 public:
     r_string name;
+	Brofiler::EventDescription* eventDescription{nullptr};
 
     void lastRefDeleted() const override {
         rv_allocator<GameInstructionProfileScopeStart>::destroy_deallocate(const_cast<GameInstructionProfileScopeStart *>(this), 1);
@@ -75,7 +80,7 @@ public:
 
     bool exec(game_state& state, vm_context& ctx) override {
         if (ctx.scheduled || sqf::can_suspend()) return false;
-        auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(), profiler.startNewScope());
+        auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(), profiler.startNewScope(), eventDescription);
 
         state.eval->varspace->varspace.insert(
             game_variable("1scp"sv, game_value(new GameDataProfileScope(std::move(data))), false)
@@ -151,7 +156,7 @@ std::string getScriptName(const r_string& str) {
         if (str.find("#line", 0) != -1) {
             auto offs = str.find("#line", 0);
             auto length = str.find("\"", offs + 9) - offs - 9;
-            auto name = std::string_view(str.begin() + offs + 9, length);
+            auto name = std::string_view(str.data() + offs + 9, length);
             return std::string(name);
         } else {
             if (str.find("scriptname", 0) != -1) __debugbreak();
@@ -161,7 +166,7 @@ std::string getScriptName(const r_string& str) {
                 if (linebreak2 > linebreak) linebreak = linebreak2;
             }
             if (linebreak != -1) {
-                auto name = std::string(str.begin(), linebreak);
+                auto name = std::string(str.data(), linebreak);
                 std::transform(name.begin(), name.end(), name.begin(), [](char ch) {
                     if (ch == '"') return '\'';
                     if (ch == '\n') return ' ';
@@ -169,7 +174,7 @@ std::string getScriptName(const r_string& str) {
                 });
                 return name;
             } else if (str.length() < 100) {
-                auto name = std::string(str.begin());
+                auto name = std::string(str.data());
                 std::transform(name.begin(), name.end(), name.begin(), [](char ch) {
                     if (ch == '"') return '\'';
                     return ch;
@@ -180,13 +185,12 @@ std::string getScriptName(const r_string& str) {
             //OutputDebugStringA(str.data());
             //OutputDebugStringA("\n\n#######\n");
         }
-
     }
     return "";
 }
 
 game_value compileRedirect(uintptr_t st, game_value_parameter message) {
-    game_state* state = (game_state*) st;
+    game_state* state = reinterpret_cast<game_state*>(st);
     r_string str = message;
 
     std::string scriptName = getScriptName(str);
@@ -197,7 +201,7 @@ game_value compileRedirect(uintptr_t st, game_value_parameter message) {
 }
 
 game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
-    game_state* state = (game_state*) st;
+    game_state* state = reinterpret_cast<game_state*>(st);
     r_string str = message;
 
     std::string scriptName = getScriptName(str);
@@ -209,6 +213,11 @@ game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
     //Insert instruction to set _x
     ref<GameInstructionProfileScopeStart> curElInstruction = rv_allocator<GameInstructionProfileScopeStart>::create_single();
     curElInstruction->name = scriptName;
+	curElInstruction->sdp = bodyCode->instructions->front()->sdp;
+	curElInstruction->eventDescription = Brofiler::EventDescription::Create("scope",curElInstruction->sdp.sourcefile.c_str(),
+			curElInstruction->sdp.sourceline);
+
+
     auto oldInstructions = bodyCode->instructions;
     ref<compact_array<ref<game_instruction>>> newInstr = compact_array<ref<game_instruction>>::create(*oldInstructions, oldInstructions->size() + 1);
 
@@ -225,20 +234,20 @@ scriptProfiler::~scriptProfiler() {}
 
 
 void scriptProfiler::preStart() {
-    auto codeType = client::host::registerType("ProfileScope"sv, "ProfileScope"sv, "Dis is a profile scope. It profiles things."sv, "ProfileScope"sv, createGameDataProfileScope);
+    static auto codeType = client::host::register_sqf_type("ProfileScope"sv, "ProfileScope"sv, "Dis is a profile scope. It profiles things."sv, "ProfileScope"sv, createGameDataProfileScope);
     GameDataProfileScope_type = codeType.second;
-    static auto _createProfileScope = client::host::registerFunction("createProfileScope", "Creates a ProfileScope", createProfileScope, codeType.first, GameDataType::STRING);
-    static auto _profilerSleep = client::host::registerFunction("profilerBlockingSleep", "Pauses the engine for 17ms. Used for testing.", profilerSleep, GameDataType::NOTHING);
-    static auto _profilerCaptureFrame = client::host::registerFunction("profilerCaptureFrame", "Captures the next frame", profilerCaptureFrame, GameDataType::NOTHING);
-    static auto _profilerCaptureFrames = client::host::registerFunction("profilerCaptureFrames", "Captures the next frame", profilerCaptureFrames, GameDataType::NOTHING, GameDataType::SCALAR);
-    static auto _profilerCaptureSlowFrame = client::host::registerFunction("profilerCaptureSlowFrame", "Captures the first frame that hits the threshold in ms", profilerCaptureSlowFrame, GameDataType::NOTHING, GameDataType::SCALAR);
-    static auto _profilerCaptureTrigger = client::host::registerFunction("profilerCaptureTrigger", "Starts recording and captures the frame that contains a trigger", profilerCaptureTrigger, GameDataType::NOTHING);
-    static auto _profilerTrigger = client::host::registerFunction("profilerTrigger", "Trigger", profilerTrigger, GameDataType::NOTHING);
-    static auto _profilerLog = client::host::registerFunction("profilerLog", "Logs message to capture", profilerLog, GameDataType::NOTHING, GameDataType::STRING);
-    static auto _profilerCompile = client::host::registerFunction("compile", "Profiler redirect", compileRedirect2, GameDataType::CODE, GameDataType::STRING);
-    static auto _profilerCompile2 = client::host::registerFunction("compile2", "Profiler redirect", compileRedirect, GameDataType::CODE, GameDataType::STRING);
-    static auto _profilerCompile3 = client::host::registerFunction("compile3", "Profiler redirect", compileRedirect2, GameDataType::CODE, GameDataType::STRING);
-    static auto _profilerCompileF = client::host::registerFunction("compileFinal", "Profiler redirect", compileRedirect2, GameDataType::CODE, GameDataType::STRING);
+    static auto _createProfileScope = client::host::register_sqf_command("createProfileScope", "Creates a ProfileScope", createProfileScope, codeType.first, game_data_type::STRING);
+    static auto _profilerSleep = client::host::register_sqf_command("profilerBlockingSleep", "Pauses the engine for 17ms. Used for testing.", profilerSleep, game_data_type::NOTHING);
+    static auto _profilerCaptureFrame = client::host::register_sqf_command("profilerCaptureFrame", "Captures the next frame", profilerCaptureFrame, game_data_type::NOTHING);
+    static auto _profilerCaptureFrames = client::host::register_sqf_command("profilerCaptureFrames", "Captures the next frame", profilerCaptureFrames, game_data_type::NOTHING, game_data_type::SCALAR);
+    static auto _profilerCaptureSlowFrame = client::host::register_sqf_command("profilerCaptureSlowFrame", "Captures the first frame that hits the threshold in ms", profilerCaptureSlowFrame, game_data_type::NOTHING, game_data_type::SCALAR);
+    static auto _profilerCaptureTrigger = client::host::register_sqf_command("profilerCaptureTrigger", "Starts recording and captures the frame that contains a trigger", profilerCaptureTrigger, game_data_type::NOTHING);
+    static auto _profilerTrigger = client::host::register_sqf_command("profilerTrigger", "Trigger", profilerTrigger, game_data_type::NOTHING);
+    static auto _profilerLog = client::host::register_sqf_command("profilerLog", "Logs message to capture", profilerLog, game_data_type::NOTHING, game_data_type::STRING);
+    static auto _profilerCompile = client::host::register_sqf_command("compile", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
+    static auto _profilerCompile2 = client::host::register_sqf_command("compile2", "Profiler redirect", compileRedirect, game_data_type::CODE, game_data_type::STRING);
+    static auto _profilerCompile3 = client::host::register_sqf_command("compile3", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
+    static auto _profilerCompileF = client::host::register_sqf_command("compileFinal", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
 }
 
 client::EHIdentifierHandle endFrameHandle;
@@ -264,6 +273,7 @@ void scriptProfiler::preInit() {
             currentFrame++;
             framesToGo--;
         }
+		BROFILER_FRAME("Frame");
     });
     frames.resize(framesToGo + 1);
 }
