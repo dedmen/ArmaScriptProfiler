@@ -35,3 +35,7 @@
 .vs
 /src/ArmaScriptProfiler/Release
 /src/ArmaScriptProfiler/Debug
+/release
+/src/x64
+/src/Debug
+/src/ArmaScriptProfiler.vcxproj.user
