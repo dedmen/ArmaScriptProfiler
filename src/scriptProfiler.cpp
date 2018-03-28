@@ -16,19 +16,21 @@ public:
     public:
         scopeData(r_string _name,
             std::chrono::high_resolution_clock::time_point _start,
-            uint64_t _scopeID, Brofiler::EventDescription* evtDscr = nullptr) : name(std::move(_name)), start(_start), scopeID(_scopeID) {
+            uint64_t _scopeID, r_string thisArgs, Brofiler::EventDescription* evtDscr = nullptr) : name(std::move(_name)), start(_start), scopeID(_scopeID) {
 
             if (evtDscr)
                 evtDt = Brofiler::Event::Start(*evtDscr);
+            if (evtDt)
+                evtDt->thisArgs = thisArgs;
         }
         ~scopeData() {
             if (scopeID == -1) return;
             auto timeDiff = std::chrono::high_resolution_clock::now() - start;
             auto runtime = std::chrono::duration_cast<chrono::microseconds>(timeDiff);
             profiler.endScope(scopeID, std::move(name), runtime);
-			if (evtDt) Brofiler::Event::Stop(*evtDt);
+            if (evtDt) Brofiler::Event::Stop(*evtDt);
         }
-		Brofiler::EventData* evtDt {nullptr};
+        Brofiler::EventData* evtDt {nullptr};
         r_string name;
         std::chrono::high_resolution_clock::time_point start;
         uint64_t scopeID = -1;
@@ -73,7 +75,7 @@ game_data* createGameDataProfileScope(param_archive* ar) {
 class GameInstructionProfileScopeStart : public game_instruction {
 public:
     r_string name;
-	Brofiler::EventDescription* eventDescription{nullptr};
+    Brofiler::EventDescription* eventDescription{nullptr};
 
     void lastRefDeleted() const override {
         rv_allocator<GameInstructionProfileScopeStart>::destroy_deallocate(const_cast<GameInstructionProfileScopeStart *>(this), 1);
@@ -81,7 +83,12 @@ public:
 
     bool exec(game_state& state, vm_context& ctx) override {
         if (ctx.scheduled || sqf::can_suspend()) return false;
-        auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(), profiler.startNewScope(), eventDescription);
+        
+
+
+        auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(), profiler.startNewScope(),
+            sqf::str(state.eval->varspace->varspace.get("_this").val),
+        eventDescription);
 
         state.eval->varspace->varspace.insert(
             game_variable("1scp"sv, game_value(new GameDataProfileScope(std::move(data))), false)
@@ -100,7 +107,10 @@ game_value createProfileScope(uintptr_t st, game_value_parameter name) {
     game_state* state = (game_state*) st;
 
 
-    auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(), profiler.startNewScope());
+    auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(),
+    profiler.startNewScope(),
+    sqf::str(state->eval->varspace->varspace.get("_this").val) //#TODO remove this. We don't want this
+    );
     return game_value(new GameDataProfileScope(std::move(data)));
 }
 
@@ -150,55 +160,108 @@ game_value profilerLog(uintptr_t, game_value_parameter message) {
     }
     return {};
 }
-  
-std::string getScriptName(const r_string& str, bool returnFirstLineIfNoName = true) {
-    if (str.empty() || str.front() == '[' && *(str.begin() + str.length() - 1) == ']') return "<unknown>";
-    if (str.find("createProfileScope", 0) == -1) {
-        if (str.find("#line", 0) != -1) {
-            auto offs = str.find("#line", 0);
-            auto length = str.find("\"", offs + 9) - offs - 9;
-            auto name = std::string_view(str.data() + offs + 9, length);
-            return std::string(name);
-        } else if (returnFirstLineIfNoName) {
-            if (str.find("scriptname", 0) != -1) __debugbreak();
-            auto linebreak = str.find("\n", 0);
-            if (linebreak < 20) {
-                auto linebreak2 = str.find("\n", linebreak);
-                if (linebreak2 > linebreak) linebreak = linebreak2;
-            }
-            if (linebreak != -1) {
-                auto name = std::string(str.data(), linebreak);
-                std::transform(name.begin(), name.end(), name.begin(), [](char ch) {
-                    if (ch == '"') return '\'';
-                    if (ch == '\n') return ' ';
-                    return ch;
-                });
-                return name;
-            } else if (str.length() < 100) {
-                auto name = std::string(str.data());
-                std::transform(name.begin(), name.end(), name.begin(), [](char ch) {
-                    if (ch == '"') return '\'';
-                    return ch;
-                });
-                return name;
-            }
-            //OutputDebugStringA(str.data());
-            //OutputDebugStringA("\n\n#######\n");
+
+
+std::regex getScriptName_acefncRegex(R"(\\?[xz]\\([^\\]*)\\addons\\([^\\]*)\\(?:functions\\)?fnc?_([^.]*)\.sqf)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
+std::regex getScriptName_LinePreprocRegex(R"(#line [0-9]* "([^"]*))", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
+std::regex getScriptName_bisfncRegex(R"(\\?A3\\(?:[^.]*\\)+fn_([^.]*).sqf)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
+std::regex getScriptName_pathScriptNameRegex(R"(\[([^\]]*)\]$)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
+std::regex getScriptName_scriptNameCmdRegex(R"(scriptName (?:"|')([^"']*))", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
+std::regex getScriptName_scriptNameVarRegex(R"(scriptName = (?:"|')([^"']*))", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
+
+
+
+std::string getScriptName(const r_string& str, const r_string& filePath, uint32_t returnFirstLineIfNoName = 0) {
+    if (str.empty() || (str.front() == '[' && *(str.begin() + str.length() - 1) == ']')) return "<unknown>";
+    
+    if (!filePath.empty()) {
+        std::match_results<compact_array<char>::const_iterator> pathMatch;
+        //A3\functions_f\Animation\Math\fn_deltaTime.sqf [BIS_fnc_deltaTime]
+        if (std::regex_search(filePath.begin(), filePath.end(), pathMatch, getScriptName_pathScriptNameRegex)) {
+            return std::string(pathMatch[1]); //BIS_fnc_deltaTime
+        }
+        //\x\cba\addons\common\fnc_currentUnit.sqf
+        if (std::regex_search(filePath.begin(), filePath.end(), pathMatch, getScriptName_acefncRegex)) {
+            return std::string(pathMatch[1]) + "_" + std::string(pathMatch[2]) + "_fnc_" + std::string(pathMatch[3]); //CBA_common_fnc_currentUnit
+        }
+        //A3\functions_f\Animation\Math\fn_deltaTime.sqf
+        if (std::regex_search(filePath.begin(), filePath.end(), pathMatch, getScriptName_bisfncRegex)) {
+            return "BIS_fnc_" + std::string(pathMatch[1]); //BIS_fnc_deltaTime
         }
     }
+
+    std::match_results<compact_array<char>::const_iterator> scriptNameMatch;
+    //scriptName "cba_events_fnc_playerEH_EachFrame";
+    if (std::regex_search(str.begin(), str.end(), scriptNameMatch, getScriptName_scriptNameCmdRegex)) {
+        return std::string(scriptNameMatch[1]); //cba_events_fnc_playerEH_EachFrame
+    }
+    //private _fnc_scriptName = 'CBA_fnc_currentUnit';
+    if (std::regex_search(str.begin(), str.end(), scriptNameMatch, getScriptName_scriptNameVarRegex)) {
+        return std::string(scriptNameMatch[1]); //CBA_fnc_currentUnit
+    }
+
+    std::match_results<compact_array<char>::const_iterator> filePathFindMatch;
+    //#line 1337 "\x\cba\addons\common\fnc_currentUnit.sqf [CBA_fnc_currentUnit]"
+    if (std::regex_search(str.begin(), str.end(), filePathFindMatch, getScriptName_LinePreprocRegex)) {
+        const auto filePathFromLine = std::string(filePathFindMatch[1]); //\x\cba\addons\common\fnc_currentUnit.sqf [CBA_fnc_currentUnit]
+
+        std::smatch pathMatchFromline;
+        //A3\functions_f\Animation\Math\fn_deltaTime.sqf [BIS_fnc_deltaTime]
+        if (!filePathFromLine.empty() && std::regex_search(filePathFromLine, pathMatchFromline, getScriptName_pathScriptNameRegex)) {
+            return std::string(pathMatchFromline[1]); //BIS_fnc_deltaTime
+        }
+        //\x\cba\addons\common\fnc_currentUnit.sqf
+        if (!filePathFromLine.empty() && std::regex_search(filePathFromLine, pathMatchFromline, getScriptName_acefncRegex)) {
+            return std::string(pathMatchFromline[1]) + "_" + std::string(pathMatchFromline[2]) + "_fnc_" + std::string(pathMatchFromline[3]); //CBA_common_fnc_currentUnit
+        }
+        //A3\functions_f\Animation\Math\fn_deltaTime.sqf
+        if (!filePathFromLine.empty() && std::regex_search(filePathFromLine, pathMatchFromline, getScriptName_bisfncRegex)) {
+            return "BIS_fnc_" + std::string(pathMatchFromline[1]); //BIS_fnc_deltaTime
+        }
+    }
+
+
+    if (str.find("createProfileScope", 0) != -1) return "<unknown>"; //Don't remember why I did this :D
+
+    if (returnFirstLineIfNoName) {
+        auto linebreak = str.find("\n", 0);
+        if (linebreak < 20) {
+            auto linebreak2 = str.find("\n", linebreak);
+            if (linebreak2 > linebreak) linebreak = linebreak2;
+        }
+        if (linebreak != -1) {
+            auto name = std::string(str.data(), linebreak);
+            std::transform(name.begin(), name.end(), name.begin(), [](char ch) {
+                if (ch == '"') return '\'';
+                if (ch == '\n') return ' ';
+                return ch;
+            });
+            return name;
+        } else if (str.length() < returnFirstLineIfNoName) {
+            auto name = std::string(str.data());
+            std::transform(name.begin(), name.end(), name.begin(), [](char ch) {
+                if (ch == '"') return '\'';
+                return ch;
+            });
+            return name;
+        }
+        //OutputDebugStringA(str.data());
+        //OutputDebugStringA("\n\n#######\n");
+    }
+
     return "<unknown>";
 }
 
-game_value compileRedirect(uintptr_t st, game_value_parameter message) {
-    game_state* state = reinterpret_cast<game_state*>(st);
-    r_string str = message;
-
-    std::string scriptName = getScriptName(str);
-
-    if (!scriptName.empty())
-        str = r_string("private _scoooope = createProfileScope \""sv) + scriptName + "\"; "sv + str;
-    return sqf::compile(str);
-}
+//game_value compileRedirect(uintptr_t st, game_value_parameter message) {
+//    game_state* state = reinterpret_cast<game_state*>(st);
+//    r_string str = message;
+//
+//    std::string scriptName = getScriptName(str);
+//
+//    if (!scriptName.empty())
+//        str = r_string("private _scoooope = createProfileScope \""sv) + scriptName + "\"; "sv + str;
+//    return sqf::compile(str);
+//}
 
 uint32_t getRandColor() {
     static std::array<uint32_t,140> colors{
@@ -351,32 +414,24 @@ uint32_t getRandColor() {
     return colors[colorsDist(rng)];
 }
 
-
-
 game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
-	//static r_string compileEventText("compile");
-	//BROFILER_EVENT(compileEventText);
+    static r_string compileEventText("compile");
+    static ::Brofiler::EventDescription* autogenerated_description_356 = Brofiler::EventDescription::Create( compileEventText, "scriptProfiler.cpp", __LINE__ ); 
+    Brofiler::Event autogenerated_event_356( *(autogenerated_description_356) );
+
     game_state* state = reinterpret_cast<game_state*>(st);
     r_string str = message;
-
-	auto comp = sqf::compile(str);
-	auto bodyCode = static_cast<game_data_code*>(comp.data.get());
-	if (!bodyCode->instructions) return comp;
+    if (autogenerated_event_356.data)
+        autogenerated_event_356.data->sourceCode = str;
 
 
-	std::string scriptName;
+    auto comp = sqf::compile(str);
+    auto bodyCode = static_cast<game_data_code*>(comp.data.get());
+    if (!bodyCode->instructions) return comp;
 
-	std::smatch m;
-	std::regex e(R"([xz]\\([^\\]*)\\addons\\([^\\]*)\\(?:functions\\)?fnc?_([^.]*)\.sqf)");   // matches words beginning by "sub"
+    auto& funcPath = bodyCode->instructions->front()->sdp.sourcefile;
 
-	auto funcPath = std::string(bodyCode->instructions->front()->sdp.sourcefile);
-	if (!funcPath.empty() && std::regex_search(funcPath , m, e)) {
-		scriptName = std::string(m[1]) + "__" + std::string(m[2]) + "_fnc_" + std::string(m[3]);
-	}
-
-
-
-	if (scriptName.empty()) scriptName = getScriptName(str, false);
+    std::string scriptName = getScriptName(str, funcPath, 32);
     if (scriptName.empty()) scriptName = "<unknown>";
 
 
@@ -384,9 +439,12 @@ game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
     //Insert instruction to set _x
     ref<GameInstructionProfileScopeStart> curElInstruction = rv_allocator<GameInstructionProfileScopeStart>::create_single();
     curElInstruction->name = scriptName;
-	curElInstruction->sdp = bodyCode->instructions->front()->sdp;
-	curElInstruction->eventDescription = Brofiler::EventDescription::Create(curElInstruction->name,curElInstruction->sdp.sourcefile.c_str(),
-			curElInstruction->sdp.sourceline, getRandColor());
+    curElInstruction->sdp = bodyCode->instructions->front()->sdp;
+    curElInstruction->eventDescription = Brofiler::EventDescription::Create(curElInstruction->name, 
+    funcPath.empty() ? curElInstruction->name.c_str() : funcPath.c_str(),
+            curElInstruction->sdp.sourceline, getRandColor());
+    //if (scriptName == "<unknown>")
+        curElInstruction->eventDescription->source = str;
 
 
     auto oldInstructions = bodyCode->instructions;
@@ -407,7 +465,6 @@ scriptProfiler::~scriptProfiler() {}
 void scriptProfiler::preStart() {
     static Brofiler::ThreadScope mainThreadScope("Frame");
 
-
     static auto codeType = client::host::register_sqf_type("ProfileScope"sv, "ProfileScope"sv, "Dis is a profile scope. It profiles things."sv, "ProfileScope"sv, createGameDataProfileScope);
     GameDataProfileScope_type = codeType.second;
     static auto _createProfileScope = client::host::register_sqf_command("createProfileScope", "Creates a ProfileScope", createProfileScope, codeType.first, game_data_type::STRING);
@@ -419,7 +476,7 @@ void scriptProfiler::preStart() {
     static auto _profilerTrigger = client::host::register_sqf_command("profilerTrigger", "Trigger", profilerTrigger, game_data_type::NOTHING);
     static auto _profilerLog = client::host::register_sqf_command("profilerLog", "Logs message to capture", profilerLog, game_data_type::NOTHING, game_data_type::STRING);
     static auto _profilerCompile = client::host::register_sqf_command("compile", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
-    static auto _profilerCompile2 = client::host::register_sqf_command("compile2", "Profiler redirect", compileRedirect, game_data_type::CODE, game_data_type::STRING);
+    //static auto _profilerCompile2 = client::host::register_sqf_command("compile2", "Profiler redirect", compileRedirect, game_data_type::CODE, game_data_type::STRING);
     static auto _profilerCompile3 = client::host::register_sqf_command("compile3", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
     static auto _profilerCompileF = client::host::register_sqf_command("compileFinal", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
 }
@@ -451,8 +508,8 @@ void scriptProfiler::preInit() {
         }
 
         Brofiler::NextFrame(); 
-		static r_string frameName("Frame");
-        static Brofiler::EventDescription* autogenerated_description_276 = ::Brofiler::EventDescription::Create(frameName, "scriptProfiler.cpp", 276 );
+        static r_string frameName("Frame");
+        static Brofiler::EventDescription* autogenerated_description_276 = ::Brofiler::EventDescription::Create(frameName, "scriptProfiler.cpp", __LINE__ );
         
         if (frameEvent)
             Brofiler::Event::Stop(*frameEvent);
@@ -645,7 +702,7 @@ void scriptProfiler::capture() {
 class ArmaScriptProfiler_ProfInterface {
 public:
     virtual game_value createScope(r_string name) {
-        auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(), profiler.startNewScope());
+        auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(), profiler.startNewScope(), r_string());
 
         return game_value(new GameDataProfileScope(std::move(data)));
     }
