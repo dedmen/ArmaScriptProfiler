@@ -16,7 +16,7 @@ public:
     public:
         scopeData(r_string _name,
             std::chrono::high_resolution_clock::time_point _start,
-            uint64_t _scopeID, r_string thisArgs, Brofiler::EventDescription* evtDscr = nullptr) : name(std::move(_name)), start(_start), scopeID(_scopeID) {
+            uint64_t _scopeID, game_value thisArgs, Brofiler::EventDescription* evtDscr = nullptr) : name(std::move(_name)), start(_start), scopeID(_scopeID) {
 
             if (evtDscr)
                 evtDt = Brofiler::Event::Start(*evtDscr);
@@ -87,7 +87,7 @@ public:
 
 
         auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(), profiler.startNewScope(),
-            sqf::str(state.eval->varspace->varspace.get("_this").val),
+            state.eval->varspace->varspace.get("_this").val,
         eventDescription);
 
         state.eval->varspace->varspace.insert(
