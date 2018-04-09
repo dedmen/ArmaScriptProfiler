@@ -176,6 +176,7 @@
     <ClCompile Include="..\brofiler\BrofilerCore\Platform\Windows\WinThreadsEnumerator.cpp" />
     <ClCompile Include="..\brofiler\BrofilerCore\ProfilerServer.cpp" />
     <ClCompile Include="..\brofiler\BrofilerCore\Serialization.cpp" />
+    <ClCompile Include="..\brofiler\BrofilerCore\SwitchContextCollector.cpp" />
     <ClCompile Include="..\brofiler\BrofilerCore\SysCallCollector.cpp" />
     <ClCompile Include="..\brofiler\ThirdParty\TaskScheduler\Scheduler\Source\MTDefaultAppInterop.cpp" />
     <ClCompile Include="..\brofiler\ThirdParty\TaskScheduler\Scheduler\Source\MTFiberContext.cpp" />

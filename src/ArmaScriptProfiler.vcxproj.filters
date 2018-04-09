@@ -203,5 +203,8 @@
     <ClCompile Include="..\brofiler\BrofilerCore\Platform\Windows\WinThreadsEnumerator.cpp">
       <Filter>brofiler</Filter>
     </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\SwitchContextCollector.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
