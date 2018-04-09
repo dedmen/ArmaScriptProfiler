@@ -1,5 +1,5 @@
 #include "scriptProfiler.hpp"
-#include <client/headers/intercept.hpp>
+#include <intercept.hpp>
 #include <sstream>
 #include <numeric>
 #include <Brofiler.h>
@@ -450,7 +450,7 @@ game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
     auto oldInstructions = bodyCode->instructions;
     ref<compact_array<ref<game_instruction>>> newInstr = compact_array<ref<game_instruction>>::create(*oldInstructions, oldInstructions->size() + 1);
 
-    std::_Copy_no_deprecate(oldInstructions->data(), oldInstructions->data() + oldInstructions->size(), newInstr->data() + 1);
+    std::copy(oldInstructions->begin(), oldInstructions->begin() + oldInstructions->size(), newInstr->begin() + 1);
     newInstr->data()[0] = curElInstruction;
     bodyCode->instructions = newInstr;
     return comp;
@@ -540,16 +540,20 @@ void scriptProfiler::endScope(uint64_t scopeID, intercept::types::r_string&& nam
     scope->name = name;
     scope->runtime += runtime;
     if (currentScope) {                       //#TODO if scope is lower scope close lower first then current and ignore when current requests to end again
+    #ifndef __linux__
         if (currentScope != scope.get()) __debugbreak(); //wut?
                                                          /*
                                                          * This can happen :/
                                                          * Create 2 scopes at the start of a function. At the end scope 1 might end before scope 2.
                                                          */
+    #endif
         if (scope->parent)
             currentScope = dynamic_cast<profileScope*>(scope->parent);
         else
             currentScope = nullptr;
+    #ifndef __linux__
         if (scope->parent && !currentScope) __debugbreak(); //wutwatwut?!! 
+    #endif
     } else if (waitingForCapture) {
         capture();
     }
@@ -654,7 +658,7 @@ bool scriptProfiler::shouldCapture() {
 
 
 void copyToClipboard(r_string txt) {
-
+#ifndef __linux__
     if (OpenClipboard(NULL) == 0) {
     } else {
         if (EmptyClipboard() == 0) {
@@ -676,7 +680,7 @@ void copyToClipboard(r_string txt) {
             }
         }
     }
-
+#endif
 }
 
 void scriptProfiler::capture() {

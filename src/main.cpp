@@ -2,8 +2,7 @@
 #include <intercept.hpp>
 
 
-
-int __cdecl intercept::api_version() {
+int intercept::api_version() {
     return 1;
 }
 
@@ -15,10 +14,10 @@ void intercept::register_interfaces() {
     profiler.registerInterfaces();
 }
 
-void __cdecl intercept::pre_start() {
+void intercept::pre_start() {
     profiler.preStart();
 }
 
-void __cdecl intercept::pre_init() {
+void intercept::pre_init() {
     profiler.preInit();
 }

@@ -1,7 +1,8 @@
 #pragma once
 #include <chrono>
-#include <client/headers/shared/types.hpp>
+#include <types.hpp>
 #include <Brofiler.h>
+#include <functional>
 
 namespace chrono {
     using nanoseconds = std::chrono::duration<double, std::nano>;
