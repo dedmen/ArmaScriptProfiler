@@ -82,7 +82,7 @@ public:
     }
 
     bool exec(game_state& state, vm_context& ctx) override {
-        if (ctx.scheduled || sqf::can_suspend()) return false;
+	    if (/*ctx.scheduled || */sqf::can_suspend()) return false;
         
 
 
@@ -101,15 +101,23 @@ public:
 
 };
 
+std::map<const ref<game_data>, Brofiler::EventDescription*> tempEventDescriptions;
+
 game_value createProfileScope(uintptr_t st, game_value_parameter name) {
     if (sqf::can_suspend()) return {};
 
     game_state* state = (game_state*) st;
+	auto found = tempEventDescriptions.find(name.data);
+	if (found == tempEventDescriptions.end()) {
+		auto newDesc = Brofiler::EventDescription::Create((r_string)name, "scriptProfiler.cpp", __LINE__);
+		found = tempEventDescriptions.insert({ name.data, newDesc }).first;
+	}
 
 
     auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(),
     profiler.startNewScope(),
-    sqf::str(state->eval->varspace->varspace.get("_this").val) //#TODO remove this. We don't want this
+    sqf::str(state->eval->varspace->varspace.get("_this").val), //#TODO remove this. We don't want this
+	found->second
     );
     return game_value(new GameDataProfileScope(std::move(data)));
 }
@@ -160,6 +168,52 @@ game_value profilerLog(uintptr_t, game_value_parameter message) {
     }
     return {};
 }
+
+//profiles script like diag_codePerformance
+game_value profileScript(uintptr_t stat, game_value_parameter par) {
+	game_state* state = (game_state*) stat;
+	code _code = par[0];
+	int runs = par.get(2).value_or(10000);
+
+	auto _emptyCode = sqf::compile("");
+
+	//CBA fastForEach
+
+	if (par.get(1) && !par[1].is_nil()) {
+		state->eval->varspace->varspace.insert({ "_this"sv,  par[1] });
+	}
+
+	//prep for action
+	for (int i = 0; i < 1000; ++i) {
+		sqf::call(_emptyCode);
+	}
+
+	auto emptyMeasStart = std::chrono::high_resolution_clock::now();
+	for (int i = 0; i < 1000; ++i) {
+		sqf::call(_emptyCode);
+	}
+	auto emptyMeasEnd = std::chrono::high_resolution_clock::now();
+
+	auto cycleLoss = std::chrono::duration_cast<std::chrono::nanoseconds>(emptyMeasEnd - emptyMeasStart) / 1000;
+
+
+	//prepare
+	for (int i = 0; i < 500; ++i) {
+		sqf::call(_code);
+	}
+
+	auto measStart = std::chrono::high_resolution_clock::now();
+	for (int i = 0; i < runs; ++i) {
+		sqf::call(_code);
+	}
+	auto measEnd = std::chrono::high_resolution_clock::now();
+
+	auto measTime = std::chrono::duration_cast<std::chrono::duration<double, std::micro>>(measEnd - measStart) / runs;
+	measTime -= cycleLoss;
+
+	return { static_cast<float>(measTime.count()), std::to_string(measTime.count()) , runs };
+}
+
 
 
 std::regex getScriptName_acefncRegex(R"(\\?[xz]\\([^\\]*)\\addons\\([^\\]*)\\(?:functions\\)?fnc?_([^.]*)\.sqf)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
@@ -414,6 +468,94 @@ uint32_t getRandColor() {
     return colors[colorsDist(rng)];
 }
 
+std::string getScriptFromFirstLine(game_instruction::sourcedocpos& pos, bool compact) {//https://github.com/dedmen/ArmaDebugEngine/blob/master/BIDebugEngine/BIDebugEngine/Script.cpp
+	if (pos.content.empty()) return pos.content.data();
+	auto needSourceFile = pos.sourcefile.empty();
+	int line = pos.sourceline + 1;
+	auto start = pos.content.begin();
+	auto end = pos.content.end();
+	std::string filename(needSourceFile ? "" : pos.sourcefile.data());
+	std::transform(filename.begin(), filename.end(), filename.begin(), tolower);
+	auto curPos = start;
+	auto curLine = 1U;
+	std::string output;
+	bool inWantedFile = needSourceFile;
+	output.reserve(end - start);
+
+	auto removeEmptyLines = [&](int count) {
+		for (size_t i = 0; i < count; i++) {
+			auto found = output.find("\n\n");
+			if (found != std::string::npos)
+				output.replace(found, 2, 1, '\n');
+			else if (output.front() == '\n') {
+				output.erase(0, 1);
+			} else {
+				output.replace(0, output.find("\n"), 1, '\n');
+			}
+		}
+	};
+
+	auto readLineMacro = [&]() {
+		curPos += 6;
+		auto numberEnd = std::find(curPos, end, ' ');
+		auto number = std::stoi(std::string(static_cast<const char*>(curPos), numberEnd - curPos));
+		curPos = numberEnd + 2;
+		auto nameEnd = std::find(curPos, end, '"');
+		std::string name(static_cast<const char*>(curPos), nameEnd - curPos);
+		std::transform(name.begin(), name.end(), name.begin(), tolower);
+		if (needSourceFile) {
+			needSourceFile = false;
+			filename = name;
+		}
+		bool wasInWantedFile = inWantedFile;
+		inWantedFile = (name == filename);
+		if (inWantedFile) {
+			if (number < curLine) removeEmptyLines((curLine - number));
+			curLine = number;
+		}
+		if (*(nameEnd + 1) == '\r') nameEnd++;
+		curPos = nameEnd + 2;
+		//if (inWantedFile && *curPos == '\n') {
+		//	curPos++;
+		//}//after each #include there is a newline which we also don't want
+
+
+		if (wasInWantedFile) {
+			output.append("#include \"");
+			output.append(name);
+			output.append("\"\n");
+			curLine++;
+		}
+
+
+		if (curPos > end) return false;
+		return true;
+	};
+	auto readLine = [&]() {
+		if (curPos > end) return false;
+		if (*curPos == '#' && *(curPos+1) == 'l') return readLineMacro();
+		auto lineEnd = std::find(curPos, end, '\n') + 1;
+		if (inWantedFile) {
+			output.append(static_cast<const char*>(curPos), lineEnd - curPos);
+			curLine++;
+		}
+		//line is curPos -> lineEnd
+		curPos = lineEnd;
+		return curPos <= end;
+	};
+	while (readLine()) {};
+	if (compact) {
+		//http://stackoverflow.com/a/24315631
+		size_t start_pos = 0;
+		while ((start_pos = output.find("\n\n\n", 0)) != std::string::npos) {
+			output.replace(start_pos, 3, "\n");
+		}
+	}
+	return output;
+}
+
+
+
 game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
     static r_string compileEventText("compile");
     static ::Brofiler::EventDescription* autogenerated_description_356 = Brofiler::EventDescription::Create( compileEventText, "scriptProfiler.cpp", __LINE__ ); 
@@ -421,13 +563,14 @@ game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
 
     game_state* state = reinterpret_cast<game_state*>(st);
     r_string str = message;
-    if (autogenerated_event_356.data)
-        autogenerated_event_356.data->sourceCode = str;
 
+	auto comp = sqf::compile(str);
+	auto bodyCode = static_cast<game_data_code*>(comp.data.get());
+	if (!bodyCode->instructions) return comp;
 
-    auto comp = sqf::compile(str);
-    auto bodyCode = static_cast<game_data_code*>(comp.data.get());
-    if (!bodyCode->instructions) return comp;
+	r_string src = getScriptFromFirstLine(bodyCode->instructions->front()->sdp, false);
+	if (autogenerated_event_356.data)
+		autogenerated_event_356.data->sourceCode = src;
 
     auto& funcPath = bodyCode->instructions->front()->sdp.sourcefile;
 
@@ -444,7 +587,7 @@ game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
     funcPath.empty() ? curElInstruction->name.c_str() : funcPath.c_str(),
             curElInstruction->sdp.sourceline, getRandColor());
     //if (scriptName == "<unknown>")
-        curElInstruction->eventDescription->source = str;
+        curElInstruction->eventDescription->source = src;
 
 
     auto oldInstructions = bodyCode->instructions;
@@ -496,7 +639,8 @@ void scriptProfiler::preStart() {
     //static auto _profilerCompile2 = client::host::register_sqf_command("compile2", "Profiler redirect", compileRedirect, game_data_type::CODE, game_data_type::STRING);
     static auto _profilerCompile3 = client::host::register_sqf_command("compile3", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
     static auto _profilerCompileF = client::host::register_sqf_command("compileFinal", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
-    static auto _profilerCallExt = client::host::register_sqf_command("callExtension", "Profiler redirect", callExtensionRedirect, game_data_type::STRING, game_data_type::STRING, game_data_type::STRING);
+	static auto _profilerCallExt = client::host::register_sqf_command("callExtension", "Profiler redirect", callExtensionRedirect, game_data_type::STRING, game_data_type::STRING, game_data_type::STRING);
+	static auto _profilerProfScript = client::host::register_sqf_command("profileScript", "Profiler redirect", profileScript, game_data_type::ARRAY, game_data_type::ARRAY);
 }
 
 client::EHIdentifierHandle endFrameHandle;
@@ -559,7 +703,7 @@ void scriptProfiler::endScope(uint64_t scopeID, intercept::types::r_string&& nam
     scope->runtime += runtime;
     if (currentScope) {                       //#TODO if scope is lower scope close lower first then current and ignore when current requests to end again
     #ifndef __linux__
-        if (currentScope != scope.get()) __debugbreak(); //wut?
+        //if (currentScope != scope.get()) __debugbreak(); //wut?
                                                          /*
                                                          * This can happen :/
                                                          * Create 2 scopes at the start of a function. At the end scope 1 might end before scope 2.
