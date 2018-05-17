@@ -40,3 +40,4 @@
 /src/Debug
 /src/ArmaScriptProfiler.vcxproj.user
 /src/Release
+*.biprivatekey
