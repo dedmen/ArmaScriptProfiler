@@ -5,6 +5,8 @@
 #include <Brofiler.h>
 #include <random>
 
+#define BROFILER_ONLY
+
 using namespace intercept;
 using namespace std::chrono_literals;
 static sqf_script_type GameDataProfileScope_type;
@@ -24,10 +26,12 @@ public:
                 evtDt->thisArgs = thisArgs;
         }
         ~scopeData() {
+            #ifndef BROFILER_ONLY
             if (scopeID == -1) return;
             auto timeDiff = std::chrono::high_resolution_clock::now() - start;
             auto runtime = std::chrono::duration_cast<chrono::microseconds>(timeDiff);
             profiler.endScope(scopeID, std::move(name), runtime);
+            #endif
             if (evtDt) Brofiler::Event::Stop(*evtDt);
         }
         Brofiler::EventData* evtDt {nullptr};
@@ -86,7 +90,12 @@ public:
         
 
 
-        auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(), profiler.startNewScope(),
+        auto data = std::make_shared<GameDataProfileScope::scopeData>(name,
+        #ifdef BROFILER_ONLY
+            std::chrono::high_resolution_clock::time_point(), 0u,
+        #else
+            std::chrono::high_resolution_clock::now(), profiler.startNewScope(),
+        #endif
             state.eval->varspace->varspace.get("_this").val,
         eventDescription);
 
