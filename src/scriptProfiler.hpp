@@ -67,6 +67,7 @@ public:
     scriptProfiler();
     ~scriptProfiler();
     void preStart();
+    void perFrame();
     void preInit();
     //Starts new scope and returns it's assigned scopeID
     uint64_t startNewScope();

@@ -21,3 +21,7 @@ void intercept::pre_start() {
 void intercept::pre_init() {
     profiler.preInit();
 }
+
+void intercept::on_frame() {
+    profiler.perFrame();
+}

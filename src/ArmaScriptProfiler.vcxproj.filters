@@ -33,6 +33,30 @@
     <ClInclude Include="scriptProfiler.hpp">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\Brofiler.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\Common.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\Core.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\Event.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\EventDescriptionBoard.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\Message.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\ProfilerServer.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\ThreadID.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="scriptProfiler.cpp">
@@ -182,9 +206,6 @@
     <ClCompile Include="..\brofiler\BrofilerCore\SysCallCollector.cpp">
       <Filter>brofiler</Filter>
     </ClCompile>
-    <ClCompile Include="..\brofiler\BrofilerCore\Platform\SamplingProfiler.cpp">
-      <Filter>brofiler</Filter>
-    </ClCompile>
     <ClCompile Include="..\brofiler\BrofilerCore\Platform\SchedulerTrace.cpp">
       <Filter>brofiler</Filter>
     </ClCompile>
@@ -194,16 +215,16 @@
     <ClCompile Include="..\brofiler\BrofilerCore\Platform\Windows\EtwTracer.cpp">
       <Filter>brofiler</Filter>
     </ClCompile>
-    <ClCompile Include="..\brofiler\BrofilerCore\Platform\Windows\Sampler.cpp">
-      <Filter>brofiler</Filter>
-    </ClCompile>
     <ClCompile Include="..\brofiler\BrofilerCore\Platform\Windows\SymEngine.cpp">
       <Filter>brofiler</Filter>
     </ClCompile>
-    <ClCompile Include="..\brofiler\BrofilerCore\Platform\Windows\WinThreadsEnumerator.cpp">
+    <ClCompile Include="..\brofiler\BrofilerCore\SwitchContextCollector.cpp">
       <Filter>brofiler</Filter>
     </ClCompile>
-    <ClCompile Include="..\brofiler\BrofilerCore\SwitchContextCollector.cpp">
+    <ClCompile Include="..\brofiler\BrofilerCore\CityHash.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\Memory.cpp">
       <Filter>brofiler</Filter>
     </ClCompile>
   </ItemGroup>
