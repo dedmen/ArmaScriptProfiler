@@ -4,6 +4,7 @@
 #include <numeric>
 #include <Brofiler.h>
 #include <random>
+#include <windows.h>
 
 #define BROFILER_ONLY
 
@@ -100,10 +101,10 @@ public:
         #else
             std::chrono::high_resolution_clock::now(), profiler.startNewScope(),
         #endif
-            state.eval->varspace->varspace.get("_this").val,
+            state.eval->local->variables.get("_this").value,
         eventDescription);
 
-        state.eval->varspace->varspace.insert(
+        state.eval->local->variables.insert(
             game_variable("1scp"sv, game_value(new GameDataProfileScope(std::move(data))), false)
         );
         lastScopeStart = name;
@@ -131,7 +132,7 @@ game_value createProfileScope(uintptr_t st, game_value_parameter name) {
 
     auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(),
     profiler.startNewScope(),
-    sqf::str(state->eval->varspace->varspace.get("_this").val), //#TODO remove this. We don't want this
+    sqf::str(state->eval->local->variables.get("_this").value), //#TODO remove this. We don't want this
 	found->second
     );
     return game_value(new GameDataProfileScope(std::move(data)));
@@ -196,7 +197,7 @@ game_value profileScript(uintptr_t stat, game_value_parameter par) {
 	//CBA fastForEach
 
 	if (par.get(1) && !par[1].is_nil()) {
-		state->eval->varspace->varspace.insert({ "_this"sv,  par[1] });
+		state->eval->local->variables.insert({ "_this"sv,  par[1] });
 	}
 
 	//prep for action
@@ -484,7 +485,7 @@ uint32_t getRandColor() {
     return colors[colorsDist(rng)];
 }
 
-std::string getScriptFromFirstLine(game_instruction::sourcedocpos& pos, bool compact) {//https://github.com/dedmen/ArmaDebugEngine/blob/master/BIDebugEngine/BIDebugEngine/Script.cpp
+std::string getScriptFromFirstLine(sourcedocpos& pos, bool compact) {//https://github.com/dedmen/ArmaDebugEngine/blob/master/BIDebugEngine/BIDebugEngine/Script.cpp
 	if (pos.content.empty()) return pos.content.data();
 	auto needSourceFile = pos.sourcefile.empty();
 	int line = pos.sourceline + 1;
@@ -838,7 +839,7 @@ public:
 	static inline std::map<size_t, Brofiler::EventDescription*> descriptions;
 
 	virtual bool exec(game_state& state, vm_context& t) {
-            if (false && !sqf::can_suspend() && !state.eval->varspace->varspace.has_key("1scp")) {
+            if (false && !sqf::can_suspend() && !state.eval->local->variables.has_key("1scp")) {
                 auto found = descriptions.find(sdp.content.hash());
                 if (found == descriptions.end()) {
                     found = descriptions.insert({ sdp.content.hash(),::Brofiler::EventDescription::Create(_operators->_name, sdp.sourcefile, sdp.sourceline) }).first;
@@ -849,10 +850,10 @@ public:
 #else
                     std::chrono::high_resolution_clock::now(), profiler.startNewScope(),
 #endif
-                    state.eval->varspace->varspace.get("_this").val,
+                    state.eval->local->variables.get("_this").value,
                     (found->second));
                 auto newScope = new GameDataProfileScope(std::move(data));
-                state.eval->varspace->varspace.insert(
+                state.eval->local->variables.insert(
                     game_variable("1scp"sv, game_value(newScope), false)
                 );
 
