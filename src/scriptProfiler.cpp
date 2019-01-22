@@ -1,48 +1,36 @@
 #include "scriptProfiler.hpp"
 #include <intercept.hpp>
-#include <sstream>
 #include <numeric>
 #include <Brofiler.h>
 #include <random>
-#include <windows.h>
+#include <Windows.h>
+#include "ProfilerAdapter.hpp"
+#include "AdapterArmaDiag.hpp"
 
-#define BROFILER_ONLY
+//#define BROFILER_ONLY
 
 using namespace intercept;
 using namespace std::chrono_literals;
 static sqf_script_type GameDataProfileScope_type;
 scriptProfiler profiler{};
+std::shared_ptr<ProfilerAdapter> GProfilerAdapter;
 
 class GameDataProfileScope : public game_data {
 
 public:
     class scopeData {
     public:
-        scopeData(r_string _name,
-            std::chrono::high_resolution_clock::time_point _start,
-            uint64_t _scopeID, game_value thisArgs, Brofiler::EventDescription* evtDscr = nullptr) : name(std::move(_name)), start(_start), scopeID(_scopeID) {
+        scopeData(r_string _name, game_value thisArgs, std::shared_ptr<ScopeInfo> scopeInfo) : name(std::move(_name)) {
+			if (!scopeInfo) return;
 
-            if (evtDscr) {
-                evtDt = Brofiler::Event::Start(*evtDscr);
-            }
-            //if (evtDt)
-            //    evtDt->thisArgs = thisArgs;
+			scopeTempStorage = GProfilerAdapter->enterScope(scopeInfo);
+			GProfilerAdapter->setThisArgs(scopeTempStorage, thisArgs);
         }
         ~scopeData() {
-            #ifndef BROFILER_ONLY
-            if (scopeID == -1) return;
-            auto timeDiff = std::chrono::high_resolution_clock::now() - start;
-            auto runtime = std::chrono::duration_cast<chrono::microseconds>(timeDiff);
-            profiler.endScope(scopeID, std::move(name), runtime);
-            #endif
-            if (evtDt) {
-                Brofiler::Event::Stop(*evtDt);
-            }
+			GProfilerAdapter->leaveScope(scopeTempStorage);
         }
-        Brofiler::EventData* evtDt {nullptr};
-        r_string name;
-        std::chrono::high_resolution_clock::time_point start;
-        uint64_t scopeID = -1;
+		std::shared_ptr<ScopeTempStorage> scopeTempStorage;
+		r_string name;
     };
 
     GameDataProfileScope() {}
@@ -79,12 +67,10 @@ game_data* createGameDataProfileScope(param_archive* ar) {
     return x;
 }
 
-
-
 class GameInstructionProfileScopeStart : public game_instruction {
 public:
     r_string name;
-    Brofiler::EventDescription* eventDescription{nullptr};
+   std::shared_ptr<ScopeInfo> scopeInfo;
 
     void lastRefDeleted() const override {
         rv_allocator<GameInstructionProfileScopeStart>::destroy_deallocate(const_cast<GameInstructionProfileScopeStart *>(this), 1);
@@ -92,17 +78,11 @@ public:
 
     bool exec(game_state& state, vm_context& ctx) override {
         static r_string lastScopeStart = "";
-	    if (/*ctx.scheduled || */sqf::can_suspend() || (lastScopeStart.length() && lastScopeStart == name)) return false;
-
+	    if ((!GProfilerAdapter->IsScheduledSupported() &&/*ctx.scheduled || */sqf::can_suspend()) || (lastScopeStart.length() && lastScopeStart == name)) return false;
 
         auto data = std::make_shared<GameDataProfileScope::scopeData>(name,
-        #ifdef BROFILER_ONLY
-            std::chrono::high_resolution_clock::time_point(), 0u,
-        #else
-            std::chrono::high_resolution_clock::now(), profiler.startNewScope(),
-        #endif
             state.eval->local->variables.get("_this").value,
-        eventDescription);
+			scopeInfo);
 
         state.eval->local->variables.insert(
             game_variable("1scp"sv, game_value(new GameDataProfileScope(std::move(data))), false)
@@ -116,25 +96,17 @@ public:
 
 };
 
-std::map<const ref<game_data>, Brofiler::EventDescription*> tempEventDescriptions;
-
 game_value createProfileScope(uintptr_t st, game_value_parameter name) {
     if (sqf::can_suspend()) return {};
     static r_string profName("scriptProfiler.cpp");
 
     game_state* state = (game_state*) st;
-	auto found = tempEventDescriptions.find(name.data);
-	if (found == tempEventDescriptions.end()) {
-		auto newDesc = Brofiler::EventDescription::Create((r_string)name, profName, __LINE__);
-		found = tempEventDescriptions.insert({ name.data, newDesc }).first;
-	}
 
-
-    auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(),
-    profiler.startNewScope(),
+    auto data = std::make_shared<GameDataProfileScope::scopeData>(name,
     sqf::str(state->eval->local->variables.get("_this").value), //#TODO remove this. We don't want this
-	found->second
+	GProfilerAdapter->createScope((r_string)name, profName, __LINE__)
     );
+	//#TODO retrieve line from callstack
     return game_value(new GameDataProfileScope(std::move(data)));
 }
 
@@ -144,45 +116,42 @@ game_value profilerSleep(uintptr_t) {
 }
 
 game_value profilerCaptureFrame(uintptr_t) {
-    profiler.profileStartFrame = sqf::diag_frameno();
-    profiler.shouldRecord = true;
-    profiler.forceCapture = true;
+	auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
+	if (!armaDiagProf) return {};
+	armaDiagProf->captureFrame();
     return {};
 }
 
 game_value profilerCaptureFrames(uintptr_t, game_value_parameter count) {
-    profiler.profileStartFrame = sqf::diag_frameno();
-    profiler.shouldRecord = true;
-    profiler.forceCapture = true;
-    profiler.framesToGo = static_cast<float>(count);
-    profiler.frames.resize(static_cast<float>(count) + 1);
+	auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
+	if (!armaDiagProf) return {};
+	armaDiagProf->captureFrames(static_cast<float>(count));
     return {};
 }
 
 game_value profilerCaptureSlowFrame(uintptr_t, game_value_parameter threshold) {
-    profiler.shouldRecord = true;
-    profiler.slowCheck = chrono::milliseconds(static_cast<float>(threshold));
-    profiler.triggerMode = true;
+	auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
+	if (!armaDiagProf) return {};
+	armaDiagProf->captureSlowFrame(chrono::milliseconds(static_cast<float>(threshold)));
     return {};
 }
 
 game_value profilerCaptureTrigger(uintptr_t) {
-    profiler.shouldRecord = true;
-    profiler.trigger = false;
-    profiler.triggerMode = true;
+	auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
+	if (!armaDiagProf) return {};
+	armaDiagProf->captureTrigger();
     return {};
 }
 
 game_value profilerTrigger(uintptr_t) {
-    profiler.trigger = true;
+ auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
+	if (!armaDiagProf) return {};
+	armaDiagProf->profilerTrigger();
     return {};
 }
 
 game_value profilerLog(uintptr_t, game_value_parameter message) {
-    //#TODO brofiler tags
-    if (profiler.shouldBeRecording()) {
-        profiler.addLog(message);
-    }
+	GProfilerAdapter->addLog(message);
     return {};
 }
 
@@ -334,156 +303,6 @@ std::string getScriptName(const r_string& str, const r_string& filePath, uint32_
 //    return sqf::compile(str);
 //}
 
-uint32_t getRandColor() {
-    static std::array<uint32_t,140> colors{
-        Brofiler::Color::AliceBlue,
-        Brofiler::Color::AntiqueWhite,
-        Brofiler::Color::Aqua,
-        Brofiler::Color::Aquamarine,
-        Brofiler::Color::Azure,
-        Brofiler::Color::Beige,
-        Brofiler::Color::Bisque,
-        Brofiler::Color::Black,
-        Brofiler::Color::BlanchedAlmond,
-        Brofiler::Color::Blue,
-        Brofiler::Color::BlueViolet,
-        Brofiler::Color::Brown,
-        Brofiler::Color::BurlyWood,
-        Brofiler::Color::CadetBlue,
-        Brofiler::Color::Chartreuse,
-        Brofiler::Color::Chocolate,
-        Brofiler::Color::Coral,
-        Brofiler::Color::CornflowerBlue,
-        Brofiler::Color::Cornsilk,
-        Brofiler::Color::Crimson,
-        Brofiler::Color::Cyan,
-        Brofiler::Color::DarkBlue,
-        Brofiler::Color::DarkCyan,
-        Brofiler::Color::DarkGoldenRod,
-        Brofiler::Color::DarkGray,
-        Brofiler::Color::DarkGreen,
-        Brofiler::Color::DarkKhaki,
-        Brofiler::Color::DarkMagenta,
-        Brofiler::Color::DarkOliveGreen,
-        Brofiler::Color::DarkOrange,
-        Brofiler::Color::DarkOrchid,
-        Brofiler::Color::DarkRed,
-        Brofiler::Color::DarkSalmon,
-        Brofiler::Color::DarkSeaGreen,
-        Brofiler::Color::DarkSlateBlue,
-        Brofiler::Color::DarkSlateGray,
-        Brofiler::Color::DarkTurquoise,
-        Brofiler::Color::DarkViolet,
-        Brofiler::Color::DeepPink,
-        Brofiler::Color::DeepSkyBlue,
-        Brofiler::Color::DimGray,
-        Brofiler::Color::DodgerBlue,
-        Brofiler::Color::FireBrick,
-        Brofiler::Color::FloralWhite,
-        Brofiler::Color::ForestGreen,
-        Brofiler::Color::Fuchsia,
-        Brofiler::Color::Gainsboro,
-        Brofiler::Color::GhostWhite,
-        Brofiler::Color::Gold,
-        Brofiler::Color::GoldenRod,
-        Brofiler::Color::Gray,
-        Brofiler::Color::Green,
-        Brofiler::Color::GreenYellow,
-        Brofiler::Color::HoneyDew,
-        Brofiler::Color::HotPink,
-        Brofiler::Color::IndianRed,
-        Brofiler::Color::Indigo,
-        Brofiler::Color::Ivory,
-        Brofiler::Color::Khaki,
-        Brofiler::Color::Lavender,
-        Brofiler::Color::LavenderBlush,
-        Brofiler::Color::LawnGreen,
-        Brofiler::Color::LemonChiffon,
-        Brofiler::Color::LightBlue,
-        Brofiler::Color::LightCoral,
-        Brofiler::Color::LightCyan,
-        Brofiler::Color::LightGoldenRodYellow,
-        Brofiler::Color::LightGray,
-        Brofiler::Color::LightGreen,
-        Brofiler::Color::LightPink,
-        Brofiler::Color::LightSalmon,
-        Brofiler::Color::LightSeaGreen,
-        Brofiler::Color::LightSkyBlue,
-        Brofiler::Color::LightSlateGray,
-        Brofiler::Color::LightSteelBlue,
-        Brofiler::Color::LightYellow,
-        Brofiler::Color::Lime,
-        Brofiler::Color::LimeGreen,
-        Brofiler::Color::Linen,
-        Brofiler::Color::Magenta,
-        Brofiler::Color::Maroon,
-        Brofiler::Color::MediumAquaMarine,
-        Brofiler::Color::MediumBlue,
-        Brofiler::Color::MediumOrchid,
-        Brofiler::Color::MediumPurple,
-        Brofiler::Color::MediumSeaGreen,
-        Brofiler::Color::MediumSlateBlue,
-        Brofiler::Color::MediumSpringGreen,
-        Brofiler::Color::MediumTurquoise,
-        Brofiler::Color::MediumVioletRed,
-        Brofiler::Color::MidnightBlue,
-        Brofiler::Color::MintCream,
-        Brofiler::Color::MistyRose,
-        Brofiler::Color::Moccasin,
-        Brofiler::Color::NavajoWhite,
-        Brofiler::Color::Navy,
-        Brofiler::Color::OldLace,
-        Brofiler::Color::Olive,
-        Brofiler::Color::OliveDrab,
-        Brofiler::Color::Orange,
-        Brofiler::Color::OrangeRed,
-        Brofiler::Color::Orchid,
-        Brofiler::Color::PaleGoldenRod,
-        Brofiler::Color::PaleGreen,
-        Brofiler::Color::PaleTurquoise,
-        Brofiler::Color::PaleVioletRed,
-        Brofiler::Color::PapayaWhip,
-        Brofiler::Color::PeachPuff,
-        Brofiler::Color::Peru,
-        Brofiler::Color::Pink,
-        Brofiler::Color::Plum,
-        Brofiler::Color::PowderBlue,
-        Brofiler::Color::Purple,
-        Brofiler::Color::Red,
-        Brofiler::Color::RosyBrown,
-        Brofiler::Color::RoyalBlue,
-        Brofiler::Color::SaddleBrown,
-        Brofiler::Color::Salmon,
-        Brofiler::Color::SandyBrown,
-        Brofiler::Color::SeaGreen,
-        Brofiler::Color::SeaShell,
-        Brofiler::Color::Sienna,
-        Brofiler::Color::Silver,
-        Brofiler::Color::SkyBlue,
-        Brofiler::Color::SlateBlue,
-        Brofiler::Color::SlateGray,
-        Brofiler::Color::Snow,
-        Brofiler::Color::SpringGreen,
-        Brofiler::Color::SteelBlue,
-        Brofiler::Color::Tan,
-        Brofiler::Color::Teal,
-        Brofiler::Color::Thistle,
-        Brofiler::Color::Tomato,
-        Brofiler::Color::Turquoise,
-        Brofiler::Color::Violet,
-        Brofiler::Color::Wheat,
-        Brofiler::Color::White,
-        Brofiler::Color::WhiteSmoke,
-        Brofiler::Color::Yellow,
-        Brofiler::Color::YellowGreen
-    };
-
-
-
-    static std::default_random_engine rng(std::random_device{}());
-    std::uniform_int_distribution<size_t> colorsDist(0, colors.size() - 1);
-    return colors[colorsDist(rng)];
-}
 
 std::string getScriptFromFirstLine(sourcedocpos& pos, bool compact) {//https://github.com/dedmen/ArmaDebugEngine/blob/master/BIDebugEngine/BIDebugEngine/Script.cpp
 	if (pos.content.empty()) return pos.content.data();
@@ -636,9 +455,9 @@ void addScopeInstruction(game_data_code* bodyCode, std::string scriptName) {
     ref<GameInstructionProfileScopeStart> curElInstruction = rv_allocator<GameInstructionProfileScopeStart>::create_single();
     curElInstruction->name = scriptName;
     curElInstruction->sdp = bodyCode->instructions->front()->sdp;
-    curElInstruction->eventDescription = Brofiler::EventDescription::Create(curElInstruction->name,
+    curElInstruction->scopeInfo = GProfilerAdapter->createScope(curElInstruction->name,
         funcPath.empty() ? curElInstruction->name : funcPath,
-        curElInstruction->sdp.sourceline, getRandColor());
+        curElInstruction->sdp.sourceline);
     //if (scriptName == "<unknown>")
     //curElInstruction->eventDescription->source = src;
 
@@ -713,7 +532,7 @@ game_value callExtensionRedirect(uintptr_t st, game_value_parameter ext, game_va
 
 
 
-scriptProfiler::scriptProfiler() { frames.resize(framesToGo + 1); }
+scriptProfiler::scriptProfiler() {}
 
 
 scriptProfiler::~scriptProfiler() {}
@@ -812,8 +631,6 @@ namespace intercept::__internal {
 }
 
 
-
-
 class GameInstructionVariable : public game_instruction {
 public:
 	r_string name;
@@ -839,6 +656,7 @@ public:
 	static inline std::map<size_t, Brofiler::EventDescription*> descriptions;
 
 	virtual bool exec(game_state& state, vm_context& t) {
+		/*
             if (false && !sqf::can_suspend() && !state.eval->local->variables.has_key("1scp")) {
                 auto found = descriptions.find(sdp.content.hash());
                 if (found == descriptions.end()) {
@@ -868,7 +686,7 @@ public:
                 }
 
             }
-
+		*/
 		typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
 		return reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionOperator)(this, state, t);
 	}
@@ -1059,222 +877,22 @@ void scriptProfiler::preStart() {
 
 client::EHIdentifierHandle endFrameHandle;
 
-Brofiler::EventData* frameEvent = nullptr;
 
 void scriptProfiler::perFrame() {
-    if (frameEvent)
-        Brofiler::Event::Stop(*frameEvent);
-
-    if (shouldBeRecording() && shouldCapture() && !framesToGo) { //We always want to log if a capture is ready don't we?
-        if (currentScope == nullptr)
-            capture();
-        else
-            waitingForCapture = true; //Wait till we left all scopes
-    }
-    if (triggerMode) {
-        frameStart = std::chrono::high_resolution_clock::now();
-        frames.clear(); //#TODO recursive...
-        frames.resize(framesToGo + 1);
-    }
-    if (shouldBeRecording() && !waitingForCapture && !isRecording) {//If we are waiting for capture don't clear everything
-        frameStart = std::chrono::high_resolution_clock::now();
-        isRecording = true;
-    }
-    if (framesToGo) {
-        currentFrame++;
-        framesToGo--;
-    }
-
-    Brofiler::NextFrame();
-    static r_string frameName("Frame");
-    static r_string profName("scriptProfiler.cpp");
-    static Brofiler::EventDescription* autogenerated_description_276 = ::Brofiler::EventDescription::Create(frameName, profName, __LINE__);
-
-
-
-    frameEvent = Brofiler::Event::Start(*autogenerated_description_276);
-
-
+	GProfilerAdapter->perFrame();
 }
+
 void scriptProfiler::preInit() {
 
-    auto updateFunc = [this]() {
-        if (shouldBeRecording() && shouldCapture() && !framesToGo) { //We always want to log if a capture is ready don't we?
-            if (currentScope == nullptr)
-                capture();
-            else
-                waitingForCapture = true; //Wait till we left all scopes
-        }
-        if (triggerMode) {
-            frameStart = std::chrono::high_resolution_clock::now();
-            frames.clear(); //#TODO recursive...
-            frames.resize(framesToGo + 1);
-        }
-        if (shouldBeRecording() && !waitingForCapture && !isRecording) {//If we are waiting for capture don't clear everything
-            frameStart = std::chrono::high_resolution_clock::now();
-            isRecording = true;
-        }
-        if (framesToGo) {
-            currentFrame++;
-            framesToGo--;
-        }
-
-        Brofiler::NextFrame();
-        static r_string frameName("Frame");
-        static r_string profName("scriptProfiler.cpp");
-        static Brofiler::EventDescription* autogenerated_description_276 = ::Brofiler::EventDescription::Create(frameName, profName, __LINE__);
-
-        if (frameEvent)
-            Brofiler::Event::Stop(*frameEvent);
-
-        frameEvent = Brofiler::Event::Start(*autogenerated_description_276);
-    };
+    //auto updateFunc = [this]() {
+    //    //See scriptProfiler::perFrame();
+    //};
 
     //if (!sqf::has_interface())
     //    endFrameHandle = client::addMissionEventHandler<client::eventhandlers_mission::EachFrame>(updateFunc);
     //else
     //    endFrameHandle = client::addMissionEventHandler<client::eventhandlers_mission::Draw3D>(updateFunc);
-
-    frames.resize(framesToGo + 1);
 }
-
-uint64_t scriptProfiler::startNewScope() {
-    if (!shouldBeRecording()) return -1;
-    auto newScopeID = lastScopeID++;
-    auto newScope = std::make_shared<profileScope>(newScopeID);
-    frames[currentFrame].scopes[newScopeID] = newScope;
-    if (currentScope) {
-        currentScope->subelements.push_back(newScope);
-        newScope->parent = currentScope;
-    } else {
-        frames[currentFrame].elements.push_back(newScope);
-    }
-    currentScope = newScope.get();
-    return newScopeID;
-}
-
-void scriptProfiler::endScope(uint64_t scopeID, intercept::types::r_string&& name, chrono::microseconds runtime) {
-    if (!shouldBeRecording()) return;
-    auto& scope = frames[currentFrame].scopes[scopeID];
-    scope->name = name;
-    scope->runtime += runtime;
-    if (currentScope) {                       //#TODO if scope is lower scope close lower first then current and ignore when current requests to end again
-    #ifndef __linux__
-        //if (currentScope != scope.get()) __debugbreak(); //wut?
-                                                         /*
-                                                         * This can happen :/
-                                                         * Create 2 scopes at the start of a function. At the end scope 1 might end before scope 2.
-                                                         */
-    #endif
-        if (scope->parent)
-            currentScope = dynamic_cast<profileScope*>(scope->parent);
-        else
-            currentScope = nullptr;
-    #ifndef __linux__
-        if (scope->parent && !currentScope) __debugbreak(); //wutwatwut?!! 
-    #endif
-    } else if (waitingForCapture) {
-        capture();
-    }
-}
-
-void scriptProfiler::addLog(intercept::types::r_string msg) {
-    auto newLog = std::make_shared<profileLog>(std::move(msg));
-    if (currentScope) {
-        newLog->parent = currentScope;
-        currentScope->subelements.emplace_back(std::move(newLog));
-        //currentScope->runtime -= chrono::microseconds(1.5); //try to compensate the calltime for log command
-    } else {
-        frames[currentFrame].elements.emplace_back(std::move(newLog));
-    }
-}
-
-void scriptProfiler::iterateElementTree(const frameData& frame, std::function<void(profileElement*, size_t)> func) {
-    //https://stackoverflow.com/a/5988138
-    for (auto& element : frame.elements) {
-        profileElement* node = element.get();
-        size_t depth = 0;
-        func(node, depth);
-        while (node) {
-            if (!node->subelements.empty() && node->curElement <= node->subelements.size() - 1) {
-                profileElement* prev = node;
-                if (node->subelements[node->curElement]) {
-                    node = node->subelements[node->curElement].get();
-                }
-                depth++;
-                prev->curElement++;
-                func(node, depth);
-            } else {
-
-                node->curElement = 0; // Reset counter for next traversal.
-                node = node->parent;
-                depth--;
-            }
-        }
-    }
-
-
-
-}
-
-intercept::types::r_string scriptProfiler::generateLog() {
-    //https://pastebin.com/raw/4gfJSwdB
-    //#TODO don't really want scopes empty. Just doing it to use it as time reference
-    if (frames.size() == 1 && frames[currentFrame].elements.empty() || frames[currentFrame].scopes.empty()) return r_string();
-    std::stringstream output;
-    auto baseTimeReference = frameStart;
-    chrono::milliseconds totalRuntime = std::chrono::duration_cast<chrono::milliseconds>(std::chrono::high_resolution_clock::now() - baseTimeReference);
-    output.precision(4);
-    output << "* THREAD! YEAH!\n";
-    output << std::fixed << "total; " << 0.0 << "; " << totalRuntime.count() << ";\"Frame " << sqf::diag_frameno() << "\"\n";
-
-
-    auto iterateFunc = [&output, &baseTimeReference](profileElement* element, size_t depth) {
-        for (size_t i = 0; i < depth; ++i) {
-            output << " ";
-        }
-        chrono::milliseconds startTime = std::chrono::duration_cast<chrono::milliseconds>(element->getStartTime() - baseTimeReference);
-        switch (element->type) {
-
-            case profileElementType::scope:
-            {
-                output << std::fixed << element->getAsString() << "; " << startTime.count() << "; " << std::chrono::duration_cast<chrono::milliseconds>(element->getRunTime()).count() << ";\"" << element->getAsString() << "\"\n"; //#TODO remove or escape quotes inside string
-            }
-            break;
-            case profileElementType::log:
-            {
-                output << std::fixed << "log; " << startTime.count() << "; " << 0.0 << ";\"" << element->getAsString() << "\"\n";
-            }
-            break;
-        }
-
-    };
-
-
-    for (int i = 0; i < frames.size(); ++i) {
-        output << "* Frame " << i << "\n";
-        iterateElementTree(frames[i], iterateFunc);
-    }
-
-
-    return r_string(output.str());
-}
-
-chrono::milliseconds scriptProfiler::totalScriptRuntime() {
-    return std::accumulate(frames[currentFrame].elements.begin(), frames[currentFrame].elements.end(), chrono::milliseconds(0), [](chrono::milliseconds accu, const std::shared_ptr<profileElement>& element) -> chrono::milliseconds {
-        if (element->type != profileElementType::scope) return accu;
-        return accu + element->getRunTime();
-    });
-}
-
-bool scriptProfiler::shouldCapture() {
-    if (frames[currentFrame].elements.empty()) return false;
-    if (forceCapture && sqf::diag_frameno() > profileStartFrame) return true;
-    if (trigger) return true;
-    if (slowCheck.count() != 0.0) return (totalScriptRuntime() > slowCheck);
-    return false;
-}
-
 
 void copyToClipboard(r_string txt) {
 #ifndef __linux__
@@ -1302,30 +920,11 @@ void copyToClipboard(r_string txt) {
 #endif
 }
 
-void scriptProfiler::capture() {
-    auto log = generateLog();
-    if (!log.empty()) {
-        copyToClipboard(log);
-        forceCapture = false;
-        shouldRecord = false;
-        trigger = false;
-        sqf::diag_capture_frame(1);//Show user that we captured stuff
-        isRecording = false;
-        currentFrame = 0;
-        frames.clear(); //#TODO recursive...
-        frames.resize(framesToGo + 1);
-        triggerMode = false;
-    }
-    waitingForCapture = false;
-}
-
-
-
-
 class ArmaScriptProfiler_ProfInterface {
 public:
     virtual game_value createScope(r_string name) {
-        auto data = std::make_shared<GameDataProfileScope::scopeData>(name, std::chrono::high_resolution_clock::now(), profiler.startNewScope(), r_string());
+		auto data = std::make_shared<GameDataProfileScope::scopeData>(name, game_value(),
+			GProfilerAdapter->createScope(name, name, 0));
 
         return game_value(new GameDataProfileScope(std::move(data)));
     }
@@ -1336,8 +935,4 @@ static ArmaScriptProfiler_ProfInterface profIface;
 
 void scriptProfiler::registerInterfaces() {
     client::host::register_plugin_interface("ArmaScriptProfilerProfIFace"sv, 1, &profIface);
-}
-
-bool scriptProfiler::shouldBeRecording() const {
-    return shouldRecord || Brofiler::IsActive();
 }

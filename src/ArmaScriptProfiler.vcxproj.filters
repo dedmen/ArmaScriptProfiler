@@ -28,6 +28,9 @@
     <Filter Include="brofiler">
       <UniqueIdentifier>{f05467c6-7103-4702-a856-bba880d4298c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Quelldateien\Adapters">
+      <UniqueIdentifier>{56ca10d4-d090-4cbe-b5dd-915516c42166}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="scriptProfiler.hpp">
@@ -56,6 +59,15 @@
     </ClInclude>
     <ClInclude Include="..\brofiler\BrofilerCore\ThreadID.h">
       <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="ProfilerAdapter.hpp">
+      <Filter>Quelldateien\Adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="AdapterArmaDiag.hpp">
+      <Filter>Quelldateien\Adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="AdapterBrofiler.hpp">
+      <Filter>Quelldateien\Adapters</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -226,6 +238,12 @@
     </ClCompile>
     <ClCompile Include="..\brofiler\BrofilerCore\Memory.cpp">
       <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="AdapterBrofiler.cpp">
+      <Filter>Quelldateien\Adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="AdapterArmaDiag.cpp">
+      <Filter>Quelldateien\Adapters</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
