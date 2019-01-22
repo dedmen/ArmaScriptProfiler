@@ -164,6 +164,7 @@
     <ClInclude Include="..\brofiler\BrofilerCore\ThreadID.h" />
     <ClInclude Include="AdapterArmaDiag.hpp" />
     <ClInclude Include="AdapterBrofiler.hpp" />
+    <ClInclude Include="AdapterChrome.hpp" />
     <ClInclude Include="ProfilerAdapter.hpp" />
     <ClInclude Include="scriptProfiler.hpp" />
   </ItemGroup>
@@ -229,6 +230,7 @@
     <ClCompile Include="..\intercept\src\client\intercept\shared\types.cpp" />
     <ClCompile Include="AdapterArmaDiag.cpp" />
     <ClCompile Include="AdapterBrofiler.cpp" />
+    <ClCompile Include="AdapterChrome.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="scriptProfiler.cpp" />
   </ItemGroup>
