@@ -22,7 +22,6 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{051A10E4-EEEC-4F56-8F14-F96C72B3D77A}</ProjectGuid>
     <RootNamespace>ArmaScriptProfiler</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -88,21 +87,24 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
+    <Link>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
@@ -114,9 +116,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
@@ -136,9 +138,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
@@ -152,9 +154,45 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\brofiler\BrofilerCore\Brofiler.h" />
+    <ClInclude Include="..\brofiler\BrofilerCore\Common.h" />
+    <ClInclude Include="..\brofiler\BrofilerCore\Core.h" />
+    <ClInclude Include="..\brofiler\BrofilerCore\Event.h" />
+    <ClInclude Include="..\brofiler\BrofilerCore\EventDescriptionBoard.h" />
+    <ClInclude Include="..\brofiler\BrofilerCore\Message.h" />
+    <ClInclude Include="..\brofiler\BrofilerCore\ProfilerServer.h" />
+    <ClInclude Include="..\brofiler\BrofilerCore\ThreadID.h" />
+    <ClInclude Include="AdapterArmaDiag.hpp" />
+    <ClInclude Include="AdapterBrofiler.hpp" />
+    <ClInclude Include="AdapterChrome.hpp" />
+    <ClInclude Include="ProfilerAdapter.hpp" />
     <ClInclude Include="scriptProfiler.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\brofiler\BrofilerCore\CallstackCollector.cpp" />
+    <ClCompile Include="..\brofiler\BrofilerCore\CityHash.cpp" />
+    <ClCompile Include="..\brofiler\BrofilerCore\Core.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)brofilercore.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)brofilercore.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)brofilercore.obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)brofilercore.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\Event.cpp" />
+    <ClCompile Include="..\brofiler\BrofilerCore\EventDescriptionBoard.cpp" />
+    <ClCompile Include="..\brofiler\BrofilerCore\Memory.cpp" />
+    <ClCompile Include="..\brofiler\BrofilerCore\Message.cpp" />
+    <ClCompile Include="..\brofiler\BrofilerCore\Platform\SchedulerTrace.cpp" />
+    <ClCompile Include="..\brofiler\BrofilerCore\Platform\SymbolEngine.cpp" />
+    <ClCompile Include="..\brofiler\BrofilerCore\Platform\Windows\EtwTracer.cpp" />
+    <ClCompile Include="..\brofiler\BrofilerCore\Platform\Windows\SymEngine.cpp" />
+    <ClCompile Include="..\brofiler\BrofilerCore\ProfilerServer.cpp" />
+    <ClCompile Include="..\brofiler\BrofilerCore\Serialization.cpp" />
+    <ClCompile Include="..\brofiler\BrofilerCore\SwitchContextCollector.cpp" />
+    <ClCompile Include="..\brofiler\BrofilerCore\SysCallCollector.cpp" />
+    <ClCompile Include="..\brofiler\ThirdParty\TaskScheduler\Scheduler\Source\MTDefaultAppInterop.cpp" />
+    <ClCompile Include="..\brofiler\ThirdParty\TaskScheduler\Scheduler\Source\MTFiberContext.cpp" />
+    <ClCompile Include="..\brofiler\ThirdParty\TaskScheduler\Scheduler\Source\MTScheduler.cpp" />
+    <ClCompile Include="..\brofiler\ThirdParty\TaskScheduler\Scheduler\Source\MTThreadContext.cpp" />
     <ClCompile Include="..\intercept\src\client\intercept\client\client.cpp" />
     <ClCompile Include="..\intercept\src\client\intercept\client\eventhandlers.cpp" />
     <ClCompile Include="..\intercept\src\client\intercept\client\pointers.cpp" />
@@ -190,6 +228,9 @@
     <ClCompile Include="..\intercept\src\client\intercept\shared\client_types.cpp" />
     <ClCompile Include="..\intercept\src\client\intercept\shared\containers.cpp" />
     <ClCompile Include="..\intercept\src\client\intercept\shared\types.cpp" />
+    <ClCompile Include="AdapterArmaDiag.cpp" />
+    <ClCompile Include="AdapterBrofiler.cpp" />
+    <ClCompile Include="AdapterChrome.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="scriptProfiler.cpp" />
   </ItemGroup>

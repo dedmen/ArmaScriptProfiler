@@ -25,10 +25,52 @@
     <Filter Include="intercept_client\client\sqf">
       <UniqueIdentifier>{240a3cf6-839f-4abd-a695-fcd5237618d6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="brofiler">
+      <UniqueIdentifier>{f05467c6-7103-4702-a856-bba880d4298c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Quelldateien\Adapters">
+      <UniqueIdentifier>{56ca10d4-d090-4cbe-b5dd-915516c42166}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="scriptProfiler.hpp">
       <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\Brofiler.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\Common.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\Core.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\Event.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\EventDescriptionBoard.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\Message.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\ProfilerServer.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\brofiler\BrofilerCore\ThreadID.h">
+      <Filter>brofiler</Filter>
+    </ClInclude>
+    <ClInclude Include="ProfilerAdapter.hpp">
+      <Filter>Quelldateien\Adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="AdapterArmaDiag.hpp">
+      <Filter>Quelldateien\Adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="AdapterBrofiler.hpp">
+      <Filter>Quelldateien\Adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="AdapterChrome.hpp">
+      <Filter>Quelldateien\Adapters</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -142,6 +184,72 @@
     </ClCompile>
     <ClCompile Include="..\intercept\src\client\intercept\shared\containers.cpp">
       <Filter>intercept_client\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\ThirdParty\TaskScheduler\Scheduler\Source\MTDefaultAppInterop.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\ThirdParty\TaskScheduler\Scheduler\Source\MTFiberContext.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\ThirdParty\TaskScheduler\Scheduler\Source\MTScheduler.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\ThirdParty\TaskScheduler\Scheduler\Source\MTThreadContext.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\CallstackCollector.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\Core.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\Event.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\EventDescriptionBoard.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\Message.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\ProfilerServer.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\Serialization.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\SysCallCollector.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\Platform\SchedulerTrace.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\Platform\SymbolEngine.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\Platform\Windows\EtwTracer.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\Platform\Windows\SymEngine.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\SwitchContextCollector.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\CityHash.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\brofiler\BrofilerCore\Memory.cpp">
+      <Filter>brofiler</Filter>
+    </ClCompile>
+    <ClCompile Include="AdapterBrofiler.cpp">
+      <Filter>Quelldateien\Adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="AdapterArmaDiag.cpp">
+      <Filter>Quelldateien\Adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="AdapterChrome.cpp">
+      <Filter>Quelldateien\Adapters</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
