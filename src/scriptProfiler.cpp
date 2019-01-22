@@ -12,8 +12,9 @@
 using namespace intercept;
 using namespace std::chrono_literals;
 static sqf_script_type GameDataProfileScope_type;
+std::shared_ptr<ProfilerAdapter> GProfilerAdapter; //Needs to be above!! profiler
 scriptProfiler profiler{};
-std::shared_ptr<ProfilerAdapter> GProfilerAdapter;
+
 
 class GameDataProfileScope : public game_data {
 
@@ -544,9 +545,9 @@ game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
 
     auto& funcPath = bodyCode->instructions->front()->sdp.sourcefile;
     std::string scriptName = getScriptName(str, funcPath, 32);
-    if (scriptName.empty()) scriptName = "<unknown>";
+    //if (scriptName.empty()) scriptName = "<unknown>";
 
-    if (bodyCode->instructions)
+    if (bodyCode->instructions && !scriptName.empty() && scriptName != "<unknown>")
         addScopeInstruction(bodyCode, scriptName);
 
     return comp;
@@ -578,7 +579,11 @@ std::string getCommandLineParam(std::string_view needle) {
 	std::string commandLine = GetCommandLineA();
     auto found = commandLine.find(needle);
     if (found != std::string::npos) {
-        auto adapterStr = commandLine.substr(found + needle.length(), commandLine.find(' ', found + needle.length()) - (found + needle.length()));
+        auto spacePos = commandLine.find(' ', found + needle.length() + 1);
+        auto valueLength = spacePos - (found + needle.length() + 1);
+        auto adapterStr = commandLine.substr(found + needle.length() + 1, valueLength);
+        if (adapterStr.back() == '"')
+            adapterStr = adapterStr.substr(0, adapterStr.length() - 1);
 		return adapterStr;
     }
 	return {};
@@ -968,15 +973,15 @@ void scriptProfiler::perFrame() {
 				newAdapter->cleanup();
 			}
 		} else if (waitForAdapter == "Brofiler") {
-			auto chromeAdapter = std::dynamic_pointer_cast<AdapterBrofiler>(GProfilerAdapter);
-			if (!chromeAdapter) {
+			auto brofilerAdapter = std::dynamic_pointer_cast<AdapterBrofiler>(GProfilerAdapter);
+			if (!brofilerAdapter) {
 				std::shared_ptr<ProfilerAdapter> newAdapter = std::make_shared<AdapterBrofiler>();
 				GProfilerAdapter.swap(newAdapter);
 				newAdapter->cleanup();
 			}
 		} else if (waitForAdapter == "Arma") {
-			auto chromeAdapter = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
-			if (!chromeAdapter) {
+			auto armaAdapter = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
+			if (!armaAdapter) {
 				std::shared_ptr<ProfilerAdapter> newAdapter = std::make_shared<AdapterArmaDiag>();
 				GProfilerAdapter.swap(newAdapter);
 				newAdapter->cleanup();

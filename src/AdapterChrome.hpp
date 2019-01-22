@@ -4,6 +4,7 @@
 
 namespace chrono {
     using milliseconds = std::chrono::duration<double, std::milli>;
+    using microseconds = std::chrono::duration<double, std::micro>;
 }
 
 class ScopeInfoChrome final: public ScopeInfo {
@@ -33,7 +34,7 @@ public:
 	intercept::types::r_string name;
 	ChromeEventType type;
 	double start;
-	chrono::milliseconds duration;
+	chrono::microseconds duration;
 	uint64_t threadID;
 	float counterValue;
 	void writeTo(std::ofstream& str) const;

@@ -3,26 +3,40 @@
 
 #include <fstream>
 
+void printClean(std::ofstream& str, intercept::types::r_string string) {
+    for (auto& it : string) {
+        if (it == '"') 
+            str << "\\\"";
+        else if (it == '\\') 
+            str << "\\\\";
+        else str << it;
+    }
+}
+
+
 void ChromeEvent::writeTo(std::ofstream& str) const {
     str << "{"
-    << "'name':'" << name << "','ts':" << start
-    << "'pid':0,'tid':" << threadID;
+        << R"("name":")";
+    printClean(str, name);
+    str << R"(","ts":)" << start  << R"(,"pid":0,"tid":)" << threadID << ",";
     switch (type) { 
-        case ChromeEventType::durationBegin: str << "'ph':'B'"; break;
-        case ChromeEventType::durationEnd: str << "'ph':'E'"; break;
+        case ChromeEventType::durationBegin: str << R"("ph":"B",)"; break;
+        case ChromeEventType::durationEnd: str << R"("ph":"E",)"; break;
         case ChromeEventType::complete: 
-        str << "'ph':'X'" << "'dur':" << duration.count(); //#TODO args        
+        str << R"("ph":"X","dur":)" << duration.count() <<","; //#TODO args        
         break;
-        case ChromeEventType::instant: str << "'ph':'i'"; break;
+        case ChromeEventType::instant: str << R"("ph":"i",)"; break;
         case ChromeEventType::counter: 
-        str << "'ph':'C'"; 
-        str << "'args':{'" << name << "':" << counterValue << "}";
+        str << R"("ph":"C",)"; 
+        str << R"("args":{")";
+        printClean(str, name);
+        str << "\":" << counterValue << "},";
         
         break;
-        case ChromeEventType::metadata: str << "'ph':'M'"; break; //#TODO implement properly
+        case ChromeEventType::metadata: str << R"("ph":"M",)"; break; //#TODO implement properly
         default: ; 
     }
-    str << "'cat':'profiler'"; //#TODO implement properly
+    str << R"("cat":"profiler")"; //#TODO implement properly
     str << "},"; //#TODO \n for human readable
 }
 
@@ -65,7 +79,7 @@ void AdapterChrome::leaveScope(std::shared_ptr<ScopeTempStorage> tempStorage) {
 
     ChromeEvent newEvent;
     newEvent.name = tmpStorage->scopeInfo->name;
-    newEvent.start = std::chrono::duration_cast<chrono::milliseconds>(tmpStorage->start - profStart).count();
+    newEvent.start = std::chrono::duration_cast<chrono::microseconds>(tmpStorage->start - profStart).count();
     newEvent.duration = endTime-tmpStorage->start;
     newEvent.threadID = tmpStorage->threadID;
     newEvent.type = ChromeEventType::complete;
