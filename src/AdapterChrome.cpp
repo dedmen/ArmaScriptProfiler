@@ -94,6 +94,25 @@ void AdapterChrome::addLog(intercept::types::r_string message) {
     pushEvent(std::move(newEvent));
 }
 
+void AdapterChrome::setCounter(intercept::types::r_string name, float val) {
+    ChromeEvent newEvent;
+    newEvent.start = std::chrono::duration_cast<chrono::milliseconds>(std::chrono::high_resolution_clock::now() - profStart).count();
+    newEvent.threadID = 0; //#TODO threadID for scheduled
+    newEvent.counterValue = val;
+    newEvent.name = name;
+    newEvent.type = ChromeEventType::counter;
+    pushEvent(std::move(newEvent));
+}
+
+void AdapterChrome::cleanup() {
+    if (outputStream) {
+        *outputStream << "]";
+        outputStream->flush();
+        outputStream.reset();
+    }
+    storedEvents.clear();
+}
+
 void AdapterChrome::setTargetFile(std::filesystem::path target) {
     outputStream = std::make_shared<std::ofstream>(target);
 

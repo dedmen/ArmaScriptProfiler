@@ -27,6 +27,7 @@ public:
     virtual void setThisArgs(std::shared_ptr<ScopeTempStorage> tempStorage, intercept::types::game_value thisArgs) {}
 
     virtual void addLog(intercept::types::r_string message) {}
+    virtual void setCounter(intercept::types::r_string name, float val) {};
 
 
     virtual void cleanup() {}

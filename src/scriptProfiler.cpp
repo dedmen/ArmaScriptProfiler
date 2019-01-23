@@ -187,6 +187,11 @@ game_value profilerSetAdapter(uintptr_t st, game_value_parameter file) {
 	return {};
 }
 
+game_value profilerSetCounter(uintptr_t st, game_value_parameter name, game_value_parameter value) {
+	GProfilerAdapter->setCounter(name,value);
+	return {};
+}
+
 //profiles script like diag_codePerformance
 game_value profileScript(uintptr_t stat, game_value_parameter par) {
 	game_state* state = (game_state*) stat;
@@ -886,9 +891,8 @@ void scriptProfiler::preStart() {
     static auto _profilerLog = client::host::register_sqf_command("profilerLog", "Logs message to capture", profilerLog, game_data_type::NOTHING, game_data_type::STRING);
     static auto _profilerSetOutputFile = client::host::register_sqf_command("profilerSetOutputFile", "Set's output file for ChromeAdapter", profilerSetOutputFile, game_data_type::NOTHING, game_data_type::STRING);
     static auto _profilerSetAdapter = client::host::register_sqf_command("profilerSetAdapter", "Set's profiler Adapter", profilerSetAdapter, game_data_type::NOTHING, game_data_type::STRING);
-   
-	
-	
+    static auto _profilerSetCounter = client::host::register_sqf_command("profilerSetCounter", "Set's a counter value", profilerSetCounter, game_data_type::NOTHING, game_data_type::STRING, game_data_type::SCALAR);
+
 	
 	static auto _profilerCompile = client::host::register_sqf_command("compile", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
     //static auto _profilerCompile2 = client::host::register_sqf_command("compile2", "Profiler redirect", compileRedirect, game_data_type::CODE, game_data_type::STRING);

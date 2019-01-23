@@ -61,6 +61,8 @@ public:
 	std::shared_ptr<ScopeTempStorage> enterScope(std::shared_ptr<ScopeInfo> scope) override;
 	void leaveScope(std::shared_ptr<ScopeTempStorage> tempStorage) override;
 	void addLog(intercept::types::r_string message) override;
+	void setCounter(intercept::types::r_string name, float val) override;
+	void cleanup() override;
 
 	void setTargetFile(std::filesystem::path target);
 
