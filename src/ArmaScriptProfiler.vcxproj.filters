@@ -75,6 +75,12 @@
     <ClInclude Include="AdapterTracy.hpp">
       <Filter>Quelldateien\Adapters</Filter>
     </ClInclude>
+    <ClInclude Include="EngineProfiling.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="HookManager.hpp">
+      <Filter>Quelldateien</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="scriptProfiler.cpp">
@@ -257,5 +263,16 @@
     <ClCompile Include="AdapterTracy.cpp">
       <Filter>Quelldateien\Adapters</Filter>
     </ClCompile>
+    <ClCompile Include="EngineProfiling.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="HookManager.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="hooks.asm">
+      <Filter>Quelldateien</Filter>
+    </None>
   </ItemGroup>
 </Project>

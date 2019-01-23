@@ -622,6 +622,17 @@ scriptProfiler::scriptProfiler() {
     } else {
 	    GProfilerAdapter = std::make_shared<AdapterBrofiler>();
     }
+
+	if (getCommandLineParam("-profilerEnableEngine"sv)) {
+		engineProf = std::make_shared<EngineProfiling>();
+		PCounter test;
+		test.shouldTime();
+
+		ScopeProf p;
+		p.doEnd();
+	}
+
+
 }
 
 

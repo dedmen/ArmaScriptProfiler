@@ -155,13 +155,12 @@ uint32_t getRandColor() {
 }
 
 
-AdapterBrofiler::AdapterBrofiler()
-{
+AdapterBrofiler::AdapterBrofiler() {
+    type = AdapterType::Brofiler;
 }
 
 
-AdapterBrofiler::~AdapterBrofiler()
-{
+AdapterBrofiler::~AdapterBrofiler() {
     cleanup();
 }
 

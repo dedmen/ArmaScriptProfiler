@@ -53,6 +53,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
@@ -167,6 +168,8 @@
     <ClInclude Include="AdapterBrofiler.hpp" />
     <ClInclude Include="AdapterChrome.hpp" />
     <ClInclude Include="AdapterTracy.hpp" />
+    <ClInclude Include="EngineProfiling.h" />
+    <ClInclude Include="HookManager.hpp" />
     <ClInclude Include="ProfilerAdapter.hpp" />
     <ClInclude Include="scriptProfiler.hpp" />
   </ItemGroup>
@@ -234,10 +237,18 @@
     <ClCompile Include="AdapterBrofiler.cpp" />
     <ClCompile Include="AdapterChrome.cpp" />
     <ClCompile Include="AdapterTracy.cpp" />
+    <ClCompile Include="EngineProfiling.cpp" />
+    <ClCompile Include="HookManager.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="scriptProfiler.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <MASM Include="hooks.asm">
+      <FileType>Document</FileType>
+    </MASM>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
   </ImportGroup>
 </Project>

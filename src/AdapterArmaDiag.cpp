@@ -6,15 +6,13 @@
 
 extern scriptProfiler profiler;
 
-AdapterArmaDiag::AdapterArmaDiag()
-{
+AdapterArmaDiag::AdapterArmaDiag() {
     frames.resize(framesToGo + 1);
+    type = AdapterType::ArmaDiag;
 }
 
 
-AdapterArmaDiag::~AdapterArmaDiag()
-{
-}
+AdapterArmaDiag::~AdapterArmaDiag() {}
 
 std::shared_ptr<ScopeInfo> AdapterArmaDiag::createScope(intercept::types::r_string name,
     intercept::types::r_string filename, uint32_t fileline) {

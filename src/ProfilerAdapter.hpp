@@ -13,6 +13,13 @@ public:
     virtual ~ScopeTempStorage() = default;
 };
 
+enum class AdapterType {
+    ArmaDiag,
+    Brofiler,
+    Chrome,
+    Tracy,
+    invalid
+};
 
 class ProfilerAdapter {
 public:
@@ -32,8 +39,9 @@ public:
 
     virtual void cleanup() {}
 
-    bool IsScheduledSupported() { return supportsScheduled; }
-
+    bool IsScheduledSupported() const { return supportsScheduled; }
+    AdapterType getType() const { return type; }
 protected:
     bool supportsScheduled = false;
+    AdapterType type = AdapterType::invalid;
 };

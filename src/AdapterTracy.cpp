@@ -18,12 +18,11 @@ public:
 	 std::unique_ptr<tracy::ScopedZone> zone;
 };
 
-AdapterTracy::AdapterTracy()
-{
+AdapterTracy::AdapterTracy() {
+    type = AdapterType::Tracy;
 }
 
-AdapterTracy::~AdapterTracy()
-{
+AdapterTracy::~AdapterTracy() {
     tracy::s_profiler.RequestShutdown();
     while (!tracy::s_profiler.HasShutdownFinished())
         std::this_thread::sleep_for(5ms);
@@ -71,4 +70,10 @@ void AdapterTracy::addLog(intercept::types::r_string message) {
 void AdapterTracy::setCounter(intercept::types::r_string name, float val) {
     counterCache.insert(name);
     tracy::Profiler::PlotData(name.c_str(), val);
+}
+
+std::shared_ptr<ScopeInfo> AdapterTracy::createScopeStatic(const char* name, const char* filename, uint32_t fileline) {
+    auto info = std::make_shared<ScopeInfoTracy>();
+    info->info = tracy::SourceLocationData{nullptr, name, filename,fileline, 0};
+    return info;
 }

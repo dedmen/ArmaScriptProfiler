@@ -40,15 +40,13 @@ void ChromeEvent::writeTo(std::ofstream& str) const {
     str << "},"; //#TODO \n for human readable
 }
 
-AdapterChrome::AdapterChrome()
-{
+AdapterChrome::AdapterChrome() {
     profStart = std::chrono::high_resolution_clock::now();
+    type = AdapterType::Chrome;
 }
 
 
-AdapterChrome::~AdapterChrome()
-{
-}
+AdapterChrome::~AdapterChrome() {}
 
 void AdapterChrome::perFrame() {}
 
