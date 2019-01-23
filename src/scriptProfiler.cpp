@@ -8,6 +8,7 @@
 #include "AdapterBrofiler.hpp"
 #include "Event.h"
 #include "AdapterChrome.hpp"
+#include "AdapterTracy.hpp"
 
 using namespace intercept;
 using namespace std::chrono_literals;
@@ -610,7 +611,9 @@ scriptProfiler::scriptProfiler() {
 			GProfilerAdapter = std::make_shared<AdapterBrofiler>();
 		} else if (startAdapter == "Arma"sv) {
 			GProfilerAdapter = std::make_shared<AdapterArmaDiag>();
-		}
+		} else if (startAdapter == "Tracy"sv) {
+            GProfilerAdapter = std::make_shared<AdapterTracy>();
+        }
     } else {
 	    GProfilerAdapter = std::make_shared<AdapterBrofiler>();
     }
@@ -990,7 +993,14 @@ void scriptProfiler::perFrame() {
 				GProfilerAdapter.swap(newAdapter);
 				newAdapter->cleanup();
 			}
-		}
+		} else if (waitForAdapter == "Tracy") {
+            auto tracyAdapter = std::dynamic_pointer_cast<AdapterTracy>(GProfilerAdapter);
+            if (!tracyAdapter) {
+                std::shared_ptr<ProfilerAdapter> newAdapter = std::make_shared<AdapterTracy>();
+                GProfilerAdapter.swap(newAdapter);
+                newAdapter->cleanup();
+            }
+        }
 		waitForAdapter.clear();
 	}
 }

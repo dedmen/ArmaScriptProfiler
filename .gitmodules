@@ -6,3 +6,6 @@
 	path = brofiler
 	
 	url = https://github.com/dedmen/brofiler.git
+[submodule "tracy"]
+	path = tracy
+	url = https://bitbucket.org/wolfpld/tracy.git

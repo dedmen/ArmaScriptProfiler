@@ -5,6 +5,7 @@ set(BROFILER_BASE_PATH "${CMAKE_SOURCE_DIR}/brofiler")
 
 set(INTERCEPT_INCLUDE_PATH "${INTERCEPT_CLIENT_PATH}/headers" "${INTERCEPT_CLIENT_PATH}/headers/shared" "${INTERCEPT_CLIENT_PATH}/headers/client/" "${INTERCEPT_CLIENT_PATH}/headers/client/sqf")
 set(BROFILER_INCLUDE_PATH "${BROFILER_BASE_PATH}/BrofilerCore" "${BROFILER_BASE_PATH}/ThirdParty/TaskScheduler/Scheduler/Include")
+set(TRACY_INCLUDE_PATH "${CMAKE_SOURCE_DIR}/tracy")
 
 
 if(USE_64BIT_BUILD)
@@ -47,8 +48,8 @@ set(library_sources ${INTERCEPT_ASP_SOURCES})
 add_library( ${INTERCEPT_PLUGIN_NAME} SHARED ${library_sources} ${INTERCEPT_SOURCES} ${BROFILER_SOURCES})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${INTERCEPT_INCLUDE_PATH} )
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${BROFILER_INCLUDE_PATH} )
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${TRACY_INCLUDE_PATH} )
 
 target_link_libraries (${INTERCEPT_PLUGIN_NAME} ${CMAKE_THREAD_LIBS_INIT})
 

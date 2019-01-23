@@ -72,6 +72,9 @@
     <ClInclude Include="AdapterChrome.hpp">
       <Filter>Quelldateien\Adapters</Filter>
     </ClInclude>
+    <ClInclude Include="AdapterTracy.hpp">
+      <Filter>Quelldateien\Adapters</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="scriptProfiler.cpp">
@@ -249,6 +252,9 @@
       <Filter>Quelldateien\Adapters</Filter>
     </ClCompile>
     <ClCompile Include="AdapterChrome.cpp">
+      <Filter>Quelldateien\Adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="AdapterTracy.cpp">
       <Filter>Quelldateien\Adapters</Filter>
     </ClCompile>
   </ItemGroup>
