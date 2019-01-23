@@ -16,6 +16,7 @@ public:
 class ScopeTempStorageTracy final : public ScopeTempStorage {
 public:
 	 std::unique_ptr<tracy::ScopedZone> zone;
+     std::thread::id origin;
 };
 
 AdapterTracy::AdapterTracy() {
@@ -50,14 +51,20 @@ std::shared_ptr<ScopeInfo> AdapterTracy::createScope(intercept::types::r_string 
 std::shared_ptr<ScopeTempStorage> AdapterTracy::enterScope(std::shared_ptr<ScopeInfo> scope) {
     auto info = std::dynamic_pointer_cast<ScopeInfoTracy>(scope);
     if (!info) return nullptr; //#TODO debugbreak? log error?
+    ensureReady();
 
     auto ret = std::make_shared<ScopeTempStorageTracy>();
+    //ret->origin = std::this_thread::get_id();
     ret->zone = std::make_unique<tracy::ScopedZone>(&info->info, true);
     return ret;
 }
 void AdapterTracy::leaveScope(std::shared_ptr<ScopeTempStorage> tempStorage) {
     auto tmpStorage = std::dynamic_pointer_cast<ScopeTempStorageTracy>(tempStorage);
     if (!tmpStorage) return; //#TODO debugbreak? log error?
+
+
+    //if (tmpStorage->origin != std::this_thread::get_id())
+    //    __debugbreak();
 
     tmpStorage->zone.reset(); //zone destructor ends zone
 }
@@ -76,4 +83,18 @@ std::shared_ptr<ScopeInfo> AdapterTracy::createScopeStatic(const char* name, con
     auto info = std::make_shared<ScopeInfoTracy>();
     info->info = tracy::SourceLocationData{nullptr, name, filename,fileline, 0};
     return info;
+}
+
+bool AdapterTracy::isConnected() {
+    return tracy::s_profiler.IsConnected();
+}
+
+void AdapterTracy::ensureReady() {
+    if (tracy::s_token.ptr) return;
+
+    tracy::rpmalloc_thread_initialize();
+    tracy::s_token_detail = tracy::moodycamel::ProducerToken(tracy::s_queue);
+    tracy::s_token = tracy::ProducerWrapper{tracy::s_queue.get_explicit_producer(tracy::s_token_detail) };
+
+
 }

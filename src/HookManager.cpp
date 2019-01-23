@@ -12,7 +12,7 @@ HookManager::HookManager() {
     engineSize = static_cast<uintptr_t>(modInfo.SizeOfImage);
 }
 
-bool HookManager::placeHook(hookTypes type, const Pattern& pat, uintptr_t jmpTo, uintptr_t & jmpBackRef, uint8_t jmpBackOffset) {
+bool HookManager::placeHook(hookTypes type, const Pattern& pat, uintptr_t jmpTo, uintptr_t & jmpBackRef, uint8_t jmpBackOffset, bool taintRax) {
 
     auto found = findPattern(pat);
     if (found == 0) {
@@ -21,7 +21,7 @@ bool HookManager::placeHook(hookTypes type, const Pattern& pat, uintptr_t jmpTo,
 //#endif
         return false;
     }
-    jmpBackRef = placeHookTotalOffs(found, jmpTo) + jmpBackOffset;
+    jmpBackRef = placeHookTotalOffs(found, jmpTo, taintRax) + jmpBackOffset;
     return true;
 }
 
@@ -42,7 +42,7 @@ uintptr_t HookManager::placeHook(uintptr_t offset, uintptr_t jmpTo, uint8_t jmpB
     return placeHookTotalOffs(totalOffset, jmpTo) + jmpBackOffset;
 }
 
-uintptr_t HookManager::placeHookTotalOffs(uintptr_t totalOffset, uintptr_t jmpTo) {
+uintptr_t HookManager::placeHookTotalOffs(uintptr_t totalOffset, uintptr_t jmpTo, bool taintRax) {
     DWORD dwVirtualProtectBackup;
 
 
@@ -53,19 +53,50 @@ uintptr_t HookManager::placeHookTotalOffs(uintptr_t totalOffset, uintptr_t jmpTo
     64bit
     FF 25 64bit relative
     */
-#ifdef X64
+#ifdef _WIN64
     //auto distance = std::max(totalOffset, jmpTo) - std::min(totalOffset, jmpTo);
     // if distance < 2GB (2147483648) we could use the 32bit relative jmp
-    VirtualProtect(reinterpret_cast<LPVOID>(totalOffset), 14u, 0x40u, &dwVirtualProtectBackup);
-    auto jmpInstr = reinterpret_cast<unsigned char*>(totalOffset);
-    auto addrOffs = reinterpret_cast<uint32_t*>(totalOffset + 1);
-    *jmpInstr = 0x68; //push DWORD
-    *addrOffs = static_cast<uint32_t>(jmpTo) /*- totalOffset - 6*/;//offset
-    *reinterpret_cast<uint32_t*>(totalOffset + 5) = 0x042444C7; //MOV [RSP+4],
-    *reinterpret_cast<uint32_t*>(totalOffset + 9) = static_cast<uint64_t>(jmpTo) >> 32;//DWORD
-    *reinterpret_cast<unsigned char*>(totalOffset + 13) = 0xc3;//ret
-    VirtualProtect(reinterpret_cast<LPVOID>(totalOffset), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
-    return totalOffset + 14;
+
+
+    if (taintRax) {
+        //This is shorter, but messes up RAX
+
+        /*
+        push rax; //to restore it inside out target
+        moveabs rax, address
+        push rax
+        ret
+         */
+
+        VirtualProtect(reinterpret_cast<LPVOID>(totalOffset), 12u, 0x40u, &dwVirtualProtectBackup);
+        auto memberRax = reinterpret_cast<unsigned char*>(totalOffset);
+        auto jmpInstr1 = reinterpret_cast<unsigned char*>(totalOffset+1);
+        auto jmpInstr2 = reinterpret_cast<unsigned char*>(totalOffset+2);
+        auto addrOffs = reinterpret_cast<uint64_t*>(totalOffset + 3);
+        *memberRax = 0x50; //push rax
+        *jmpInstr1 = 0x48; //moveabs
+        *jmpInstr2 = 0xb8; //into rax
+        *addrOffs = static_cast<uint64_t>(jmpTo) /*- totalOffset - 6*/;//offset
+
+        auto pushInstr = reinterpret_cast<unsigned char*>(totalOffset + 11);
+        *pushInstr = 0x50; //push rax
+        *reinterpret_cast<unsigned char*>(totalOffset + 12) = 0xc3;//ret
+        VirtualProtect(reinterpret_cast<LPVOID>(totalOffset), 12u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
+        return totalOffset + 12;
+    } else {
+        VirtualProtect(reinterpret_cast<LPVOID>(totalOffset), 14u, 0x40u, &dwVirtualProtectBackup);
+        auto jmpInstr = reinterpret_cast<unsigned char*>(totalOffset);
+        auto addrOffs = reinterpret_cast<uint32_t*>(totalOffset + 1);
+        *jmpInstr = 0x68; //push DWORD
+        *addrOffs = static_cast<uint32_t>(jmpTo) /*- totalOffset - 6*/;//offset
+        *reinterpret_cast<uint32_t*>(totalOffset + 5) = 0x042444C7; //MOV [RSP+4],
+        *reinterpret_cast<uint32_t*>(totalOffset + 9) = static_cast<uint64_t>(jmpTo) >> 32;//DWORD
+        *reinterpret_cast<unsigned char*>(totalOffset + 13) = 0xc3;//ret
+        VirtualProtect(reinterpret_cast<LPVOID>(totalOffset), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
+        return totalOffset + 14;
+    }
+
+
 #else
     VirtualProtect(reinterpret_cast<LPVOID>(totalOffset), 5u, 0x40u, &dwVirtualProtectBackup);
     auto jmpInstr = reinterpret_cast<unsigned char *>(totalOffset);

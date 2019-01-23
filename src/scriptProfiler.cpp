@@ -620,17 +620,8 @@ scriptProfiler::scriptProfiler() {
             GProfilerAdapter = std::make_shared<AdapterTracy>();
         }
     } else {
-	    GProfilerAdapter = std::make_shared<AdapterBrofiler>();
+	    GProfilerAdapter = std::make_shared<AdapterTracy>();
     }
-
-	if (getCommandLineParam("-profilerEnableEngine"sv)) {
-		engineProf = std::make_shared<EngineProfiling>();
-		PCounter test;
-		test.shouldTime();
-
-		ScopeProf p;
-		p.doEnd();
-	}
 
 
 }
@@ -638,7 +629,7 @@ scriptProfiler::scriptProfiler() {
 
 scriptProfiler::~scriptProfiler() {}
 
-
+#pragma region Instructions
 namespace intercept::__internal {
 
 	class gsFuncBase {
@@ -942,10 +933,13 @@ public:
 	virtual r_string get_name() const { return ""sv; }
 };
 
-
+#pragma endregion Instructions
 
 void scriptProfiler::preStart() {
-    static Brofiler::ThreadScope mainThreadScope("Frame");
+
+    if (getCommandLineParam("-profilerEnableEngine"sv)) {
+        engineProf = std::make_shared<EngineProfiling>();
+    }
 
     static auto codeType = client::host::register_sqf_type("ProfileScope"sv, "ProfileScope"sv, "Dis is a profile scope. It profiles things."sv, "ProfileScope"sv, createGameDataProfileScope);
     GameDataProfileScope_type = codeType.second;

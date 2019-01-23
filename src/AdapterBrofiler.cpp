@@ -157,6 +157,8 @@ uint32_t getRandColor() {
 
 AdapterBrofiler::AdapterBrofiler() {
     type = AdapterType::Brofiler;
+
+    static Brofiler::ThreadScope mainThreadScope("Frame");
 }
 
 

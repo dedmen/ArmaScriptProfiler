@@ -10,6 +10,7 @@
 enum class hookTypes {
     shouldTime,   //FrameEnd/FrameStart
     doEnd,
+    scopeCompleted,
     End
 };
 
@@ -30,10 +31,10 @@ public:
 
 
     HookManager();
-    bool placeHook(hookTypes, const Pattern& pat, uintptr_t jmpTo, uintptr_t& jmpBackRef, uint8_t jmpBackOffset = 0);
+    bool placeHook(hookTypes, const Pattern& pat, uintptr_t jmpTo, uintptr_t& jmpBackRef, uint8_t jmpBackOffset = 0, bool taintRax = false);
     bool placeHook(hookTypes, const Pattern& pat, uintptr_t jmpTo);
     uintptr_t placeHook(uintptr_t offset, uintptr_t jmpTo, uint8_t jmpBackOffset = 0);
-    uintptr_t placeHookTotalOffs(uintptr_t offset, uintptr_t jmpTo);
+    uintptr_t placeHookTotalOffs(uintptr_t offset, uintptr_t jmpTo, bool taintRax = false);
     bool MatchPattern(uintptr_t addr, const char* pattern, const char* mask);
     uintptr_t findPattern(const char* pattern, const char* mask, uintptr_t offset = 0);
     uintptr_t findPattern(const Pattern& pat, uintptr_t offset = 0);

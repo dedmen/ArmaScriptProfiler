@@ -40,10 +40,10 @@ class ArmaProf {
 	friend class PCounter;
 public:
 
-	void scopeCompleted(int64_t start, int64_t end, intercept::types::r_string* stuff, void* stuff2);
+    __declspec(noinline) void scopeCompleted(int64_t start, int64_t end, intercept::types::r_string* stuff, PCounter* stuff2);
 
 
-private:
+public:
 	//This is engine stuff.
 	bool da,db,dc;
 	int dd,df;
@@ -78,7 +78,11 @@ private:
 	int blios;
 	intercept::types::r_string blip;
 	float blop;
-	bool asd,adasd;
+
+    float dummy, dummy2, dummy3;//no idea what dis is.. Stuff above is probably wrong somewhere
+
+    bool forceCapture;
+    bool capture;
 	int stuffiz;
 
 	int64_t framestart;
@@ -99,6 +103,6 @@ public:
 	EngineProfiling();
 	~EngineProfiling();
 
-
+    ArmaProf* armaP;
 	HookManager hooks;
 };
