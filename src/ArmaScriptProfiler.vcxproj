@@ -89,7 +89,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;$(SolutionDir)..\tracy;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
@@ -104,7 +104,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;$(SolutionDir)..\tracy;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
@@ -118,7 +118,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;$(SolutionDir)..\tracy;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
