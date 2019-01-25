@@ -42,7 +42,7 @@ std::shared_ptr<ScopeInfo> AdapterTracy::createScope(intercept::types::r_string 
         auto info = std::make_shared<ScopeInfoTracy>();
         info->info = tracy::SourceLocationData{nullptr, std::get<0>(tuple).c_str(), std::get<1>(tuple).c_str(), std::get<2>(tuple), 0};
 
-		auto res = scopeCache.insert({tuple, info});
+		scopeCache.insert({tuple, info});
         return info;
     }
     return found->second; 
@@ -79,7 +79,7 @@ void AdapterTracy::setCounter(intercept::types::r_string name, float val) {
     tracy::Profiler::PlotData(name.c_str(), val);
 }
 
-std::shared_ptr<ScopeInfo> AdapterTracy::createScopeStatic(const char* name, const char* filename, uint32_t fileline) {
+std::shared_ptr<ScopeInfo> AdapterTracy::createScopeStatic(const char* name, const char* filename, uint32_t fileline) const {
     auto info = std::make_shared<ScopeInfoTracy>();
     info->info = tracy::SourceLocationData{nullptr, name, filename,fileline, 0};
     return info;

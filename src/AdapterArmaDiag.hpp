@@ -18,7 +18,7 @@ public:
 
 class ScopeTempStorageArmaDiag final : public ScopeTempStorage {
 public:
-	uint64_t scopeID;
+	uint64_t scopeID = -1;
     std::chrono::high_resolution_clock::time_point startTime;
 };
 
@@ -36,7 +36,7 @@ public:
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
     profileElement(profileElementType _type) : type(_type) {}
 
-    virtual ~profileElement() {}
+    virtual ~profileElement() = default;
     virtual intercept::types::r_string getAsString() = 0;
 
     virtual std::chrono::high_resolution_clock::time_point getStartTime() { return start; }
@@ -46,7 +46,7 @@ public:
 
 class profileScope : public profileElement {
 public:
-    ~profileScope() override {};
+    ~profileScope() override = default;
     explicit profileScope(uint64_t _scopeID) : profileElement(profileElementType::scope), scopeID(_scopeID) {}
     intercept::types::r_string getAsString() override { return info->name; };
     std::chrono::microseconds getRunTime() override { return runtime; }
@@ -58,7 +58,7 @@ public:
 class profileLog : public profileElement {
 public:
     explicit profileLog(intercept::types::r_string&& _message) : profileElement(profileElementType::log), message(_message) {}
-    ~profileLog() override {};
+    ~profileLog() override = default;
     intercept::types::r_string getAsString() override { return message; }
     std::chrono::microseconds getRunTime() override { return std::chrono::microseconds(0); }
     intercept::types::r_string message;
@@ -75,7 +75,7 @@ class AdapterArmaDiag final : public ProfilerAdapter
 {
 public:
 	AdapterArmaDiag();
-	virtual ~AdapterArmaDiag();
+	virtual ~AdapterArmaDiag() = default;
 
 	std::shared_ptr<ScopeInfo> createScope(intercept::types::r_string name, intercept::types::r_string filename, uint32_t fileline) override;
 
@@ -123,7 +123,7 @@ private:
     std::chrono::high_resolution_clock::time_point frameStart;
     uint32_t framesToGo = 0;
 
-    void iterateElementTree(const frameData& frame, std::function<void(profileElement*, size_t)> func);
+    static void iterateElementTree(const frameData& frame, const std::function<void(profileElement*, size_t)>& func);
 
 };
 

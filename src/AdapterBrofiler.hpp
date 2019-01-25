@@ -1,6 +1,6 @@
 #pragma once
 #include "ProfilerAdapter.hpp"
-
+#ifdef WITH_BROFILER
 
 namespace Brofiler {
 	struct EventData;
@@ -38,3 +38,4 @@ private:
 	Brofiler::EventData* frameEvent = nullptr;
 };
 
+#endif

@@ -1,4 +1,6 @@
 option casemap :none
+.intel_syntax noprefix
+
 
 _TEXT    SEGMENT
     ;https://msdn.microsoft.com/en-us/library/windows/hardware/ff561499(v=vs.85).aspx

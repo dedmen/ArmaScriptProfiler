@@ -12,7 +12,7 @@ public:
 	const char* cat;
 	int slot, stuff2;
 
-	__declspec(noinline) bool shouldTime();
+	bool shouldTime();
 	
 };
 
@@ -33,14 +33,14 @@ public:
 	bool enabled, other;
 	intercept::types::r_string stuffz;
 
-	__declspec(noinline) void doEnd();
+	void doEnd();
 };
 
 class ArmaProf {
 	friend class PCounter;
 public:
 
-    __declspec(noinline) void scopeCompleted(int64_t start, int64_t end, intercept::types::r_string* stuff, PCounter* stuff2);
+    void scopeCompleted(int64_t start, int64_t end, intercept::types::r_string* stuff, PCounter* stuff2);
 
 
 public:
@@ -101,7 +101,7 @@ public:
 class EngineProfiling {
 public:
 	EngineProfiling();
-	~EngineProfiling();
+	~EngineProfiling() = default;
 
     ArmaProf* armaP;
 	HookManager hooks;

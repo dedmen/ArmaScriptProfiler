@@ -234,7 +234,9 @@
     <ClCompile Include="..\intercept\src\client\intercept\shared\containers.cpp" />
     <ClCompile Include="..\intercept\src\client\intercept\shared\types.cpp" />
     <ClCompile Include="AdapterArmaDiag.cpp" />
-    <ClCompile Include="AdapterBrofiler.cpp" />
+    <ClCompile Include="AdapterBrofiler.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="AdapterChrome.cpp" />
     <ClCompile Include="AdapterTracy.cpp" />
     <ClCompile Include="EngineProfiling.cpp" />

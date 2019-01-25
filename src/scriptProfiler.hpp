@@ -7,7 +7,7 @@
 class scriptProfiler {
 public:
     scriptProfiler();
-    ~scriptProfiler();
+    ~scriptProfiler() = default;
     void preStart();
     void perFrame();
     void preInit();

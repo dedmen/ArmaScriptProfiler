@@ -4,15 +4,10 @@
 #include "scriptProfiler.hpp"
 #include <numeric>
 
-extern scriptProfiler profiler;
-
 AdapterArmaDiag::AdapterArmaDiag() {
     frames.resize(framesToGo + 1);
     type = AdapterType::ArmaDiag;
 }
-
-
-AdapterArmaDiag::~AdapterArmaDiag() {}
 
 std::shared_ptr<ScopeInfo> AdapterArmaDiag::createScope(intercept::types::r_string name,
     intercept::types::r_string filename, uint32_t fileline) {
@@ -132,7 +127,7 @@ void AdapterArmaDiag::addLog(intercept::types::r_string message) {
 
 }
 
-void AdapterArmaDiag::iterateElementTree(const frameData& frame, std::function<void(profileElement*, size_t)> func) {
+void AdapterArmaDiag::iterateElementTree(const frameData& frame, const std::function<void(profileElement*, size_t)>& func) {
     //https://stackoverflow.com/a/5988138
     for (auto& element : frame.elements) {
         profileElement* node = element.get();
@@ -163,7 +158,7 @@ intercept::types::r_string AdapterArmaDiag::dumpLog() {
     if (frames.size() == 1 && frames[currentFrame].elements.empty() || frames[currentFrame].scopes.empty()) return intercept::types::r_string();
     std::stringstream output;
     auto baseTimeReference = frameStart;
-    chrono::milliseconds totalRuntime = std::chrono::duration_cast<chrono::milliseconds>(std::chrono::high_resolution_clock::now() - baseTimeReference);
+    auto totalRuntime = std::chrono::duration_cast<chrono::milliseconds>(std::chrono::high_resolution_clock::now() - baseTimeReference);
     output.precision(4);
     output << "* THREAD! YEAH!\n";
     output << std::fixed << "total; " << 0.0 << "; " << totalRuntime.count() << ";\"Frame " << intercept::sqf::diag_frameno() << "\"\n";
@@ -173,7 +168,7 @@ intercept::types::r_string AdapterArmaDiag::dumpLog() {
         for (size_t i = 0; i < depth; ++i) {
             output << " ";
         }
-        chrono::milliseconds startTime = std::chrono::duration_cast<chrono::milliseconds>(element->getStartTime() - baseTimeReference);
+        auto startTime = std::chrono::duration_cast<chrono::milliseconds>(element->getStartTime() - baseTimeReference);
         switch (element->type) {
 
             case profileElementType::scope:
@@ -191,7 +186,7 @@ intercept::types::r_string AdapterArmaDiag::dumpLog() {
     };
 
 
-    for (int i = 0; i < frames.size(); ++i) {
+    for (auto i = 0u; i < frames.size(); ++i) {
         output << "* Frame " << i << "\n";
         iterateElementTree(frames[i], iterateFunc);
     }

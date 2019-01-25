@@ -17,11 +17,11 @@ public:
 	void addLog(intercept::types::r_string message) override;
 	void setCounter(intercept::types::r_string name, float val) override;
 
-	std::shared_ptr<ScopeInfo> createScopeStatic(const char* name, const char* filename, uint32_t fileline);
-    bool isConnected();
+	std::shared_ptr<ScopeInfo> createScopeStatic(const char* name, const char* filename, uint32_t fileline) const;
+	static bool isConnected();
 
 private:
-    void ensureReady();
+	static void ensureReady();
 	using scopeCacheKey = std::tuple<intercept::types::r_string, intercept::types::r_string,uint32_t>;
 
 	struct ScopeCacheFastEqual {

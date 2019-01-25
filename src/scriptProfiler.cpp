@@ -2,7 +2,11 @@
 #include <intercept.hpp>
 #include <numeric>
 #include <random>
+#ifndef __linux__
 #include <Windows.h>
+#else
+#include <fstream>
+#endif
 #include "ProfilerAdapter.hpp"
 #include "AdapterArmaDiag.hpp"
 #include "AdapterBrofiler.hpp"
@@ -26,7 +30,7 @@ public:
 			if (!scopeInfo) return;
 
 			scopeTempStorage = GProfilerAdapter->enterScope(scopeInfo);
-			GProfilerAdapter->setThisArgs(scopeTempStorage, thisArgs);
+			GProfilerAdapter->setThisArgs(scopeTempStorage, std::move(thisArgs));
         }
         ~scopeData() {
 			GProfilerAdapter->leaveScope(scopeTempStorage);
@@ -35,14 +39,11 @@ public:
 		r_string name;
     };
 
-    GameDataProfileScope() {}
-    GameDataProfileScope(std::shared_ptr<scopeData>&& _data) : data(std::move(_data)) {}
+    GameDataProfileScope() = default;
+    GameDataProfileScope(std::shared_ptr<scopeData>&& _data) noexcept : data(std::move(_data)) {}
     void lastRefDeleted() const override { delete this; }
     const sqf_script_type& type() const override { return GameDataProfileScope_type; }
-    ~GameDataProfileScope() override {
-
-    }
-
+    ~GameDataProfileScope() override = default;
     bool get_as_bool() const override { return true; }
     float get_as_number() const override { return 0.f; }
     const r_string& get_as_string() const override { return data->name; }
@@ -79,42 +80,45 @@ public:
     }
 
     bool exec(game_state& state, vm_context& ctx) override {
-        static r_string lastScopeStart = "";
+        static r_string lastScopeStart;
 	    if ((!GProfilerAdapter->IsScheduledSupported() &&/*ctx.scheduled || */sqf::can_suspend()) || (lastScopeStart.length() && lastScopeStart == name)) return false;
 
         auto data = std::make_shared<GameDataProfileScope::scopeData>(name,
+#ifdef __linux__
+			game_value(),
+#else
             state.eval->local->variables.get("_this").value,
+#endif
 			scopeInfo);
+
+#ifdef WITH_CHROME
+		if (GProfilerAdapter->IsScheduledSupported() && sqf::can_suspend()) {
+			if (auto chromeStorage = std::dynamic_pointer_cast<ScopeTempStorageChrome>(data->scopeTempStorage))
+				chromeStorage->threadID = reinterpret_cast<uint64_t>(&ctx);
+		}
+#endif
 
         state.eval->local->variables.insert(
             game_variable("1scp"sv, game_value(new GameDataProfileScope(std::move(data))), false)
         );
         lastScopeStart = name;
 
-
-		if (GProfilerAdapter->IsScheduledSupported() && sqf::can_suspend()) {
-			if (auto chromeStorage = std::dynamic_pointer_cast<ScopeTempStorageChrome>(data->scopeTempStorage))
-				chromeStorage->threadID = reinterpret_cast<uint64_t>(&ctx);
-		}
-
-
-
         return false;
     }
     int stack_size(void* t) const override { return 0; }
     r_string get_name() const override { return "GameInstructionProfileScopeStart"sv; }
-    ~GameInstructionProfileScopeStart() override {}
+    ~GameInstructionProfileScopeStart() override = default;
 };
 
-game_value createProfileScope(uintptr_t st, game_value_parameter name) {
+game_value createProfileScope(const game_state& state, game_value_parameter name) {
     if (sqf::can_suspend()) return {};
     static r_string profName("scriptProfiler.cpp");
 
-    game_state* state = (game_state*) st;
 
     auto data = std::make_shared<GameDataProfileScope::scopeData>(name,
-    sqf::str(state->eval->local->variables.get("_this").value), //#TODO remove this. We don't want this
-	GProfilerAdapter->createScope((r_string)name, profName, __LINE__)
+    //sqf::str(state.eval->local->variables.get("_this").value), //#TODO remove this. We don't want this
+	game_value(),
+	GProfilerAdapter->createScope(static_cast<r_string>(name), profName, __LINE__)
     );
 	//#TODO retrieve line from callstack
     return game_value(new GameDataProfileScope(std::move(data)));
@@ -165,18 +169,18 @@ game_value profilerLog(uintptr_t, game_value_parameter message) {
     return {};
 }
 
-game_value profilerSetOutputFile(uintptr_t st, game_value_parameter file) {
-	
+game_value profilerSetOutputFile(const game_state& state, game_value_parameter file) {
+#ifdef WITH_CHROME
 	auto chromeAdapter = std::dynamic_pointer_cast<AdapterChrome>(GProfilerAdapter);
 	if (!chromeAdapter) {
-		game_state* state = reinterpret_cast<game_state*>(st);
-		state->eval->_errorMessage = "not using ChromeAdapter";
-		state->eval->_errorType = game_state::game_evaluator::evaluator_error_type::tg90; //No idea what tg90 is..
+		state.eval->_errorMessage = "not using ChromeAdapter";
+		state.eval->_errorType = game_state::game_evaluator::evaluator_error_type::tg90; //No idea what tg90 is..
 
 		return {};
 	}
 
 	chromeAdapter->setTargetFile(static_cast<std::string_view>(static_cast<r_string>(file)));
+#endif
 	return {};
 }
 
@@ -194,8 +198,7 @@ game_value profilerSetCounter(uintptr_t st, game_value_parameter name, game_valu
 }
 
 //profiles script like diag_codePerformance
-game_value profileScript(uintptr_t stat, game_value_parameter par) {
-	game_state* state = (game_state*) stat;
+game_value profileScript(const game_state& state, game_value_parameter par) {
 	code _code = par[0];
 	int runs = par.get(2).value_or(10000);
 
@@ -204,7 +207,7 @@ game_value profileScript(uintptr_t stat, game_value_parameter par) {
 	//CBA fastForEach
 
 	if (par.get(1) && !par[1].is_nil()) {
-		state->eval->local->variables.insert({ "_this"sv,  par[1] });
+		state.eval->local->variables.insert({ "_this"sv,  par[1] });
 	}
 
 	//prep for action
@@ -363,7 +366,7 @@ std::string getScriptFromFirstLine(sourcedocpos& pos, bool compact) {//https://g
 			else if (output.front() == '\n') {
 				output.erase(0, 1);
 			} else {
-				output.replace(0, output.find("\n"), 1, '\n');
+				output.replace(0, output.find('\n'), 1, '\n');
 			}
 		}
 	};
@@ -386,7 +389,7 @@ std::string getScriptFromFirstLine(sourcedocpos& pos, bool compact) {//https://g
 			if (number < curLine) removeEmptyLines((curLine - number));
 			curLine = number;
 		}
-		if (*(nameEnd + 1) == '\r') nameEnd++;
+		if (*(nameEnd + 1) == '\r') ++nameEnd;
 		curPos = nameEnd + 2;
 		//if (inWantedFile && *curPos == '\n') {
 		//	curPos++;
@@ -401,8 +404,7 @@ std::string getScriptFromFirstLine(sourcedocpos& pos, bool compact) {//https://g
 		}
 
 
-		if (curPos > end) return false;
-		return true;
+		return curPos <= end;
 	};
 	auto readLine = [&]() {
 		if (curPos > end) return false;
@@ -419,7 +421,7 @@ std::string getScriptFromFirstLine(sourcedocpos& pos, bool compact) {//https://g
 	while (readLine()) {};
 	if (compact) {
 		//http://stackoverflow.com/a/24315631
-		size_t start_pos = 0;
+		size_t start_pos;
 		while ((start_pos = output.find("\n\n\n", 0)) != std::string::npos) {
 			output.replace(start_pos, 3, "\n");
 		}
@@ -454,7 +456,8 @@ static struct {
 class GameInstructionConst : public game_instruction {
 public:
     game_value value;
-    virtual bool exec(game_state& state, vm_context& t) {
+
+    bool exec(game_state& state, vm_context& t) override {
         //static const r_string InstrName = "I_Const"sv;
         //static Brofiler::EventDescription* autogenerated_description = ::Brofiler::EventDescription::Create(InstrName, __FILE__, __LINE__);
         //Brofiler::Event autogenerated_event_639(*autogenerated_description);
@@ -462,19 +465,26 @@ public:
         //if (autogenerated_event_639.data)
         //    autogenerated_event_639.data->thisArgs = value;
 
-        typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
+        typedef bool(
+#ifndef __linux__
+			__thiscall 
+#endif
+			*OrigEx)(game_instruction*, game_state&, vm_context&);
         return reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionConst)(this, state, t);
     }
-    virtual int stack_size(void* t) const { return 0; }
-    virtual r_string get_name() const { return ""sv; }
+
+    int stack_size(void* t) const override { return 0; }
+    r_string get_name() const override { return ""sv; }
 };
 
 
 
 
-void addScopeInstruction(game_data_code* bodyCode, std::string scriptName) {
+void addScopeInstruction(game_data_code* bodyCode, const std::string& scriptName) {
+#ifndef __linux__
 #ifndef _WIN64
 #error "no x64 hash codes yet"
+#endif
 #endif
     auto lt = typeid(bodyCode->instructions->data()[0]).hash_code();
     auto rt = typeid(GameInstructionProfileScopeStart).hash_code();
@@ -484,7 +494,7 @@ void addScopeInstruction(game_data_code* bodyCode, std::string scriptName) {
 
 
     auto& funcPath = bodyCode->instructions->front()->sdp.sourcefile;
-    r_string src = getScriptFromFirstLine(bodyCode->instructions->front()->sdp, false);
+    //r_string src = getScriptFromFirstLine(bodyCode->instructions->front()->sdp, false);
 
 
 
@@ -507,14 +517,23 @@ void addScopeInstruction(game_data_code* bodyCode, std::string scriptName) {
     bodyCode->instructions = newInstr;
 
 
-
-    static const size_t ConstTypeIDHash = 0x0a56f03038a03360;
+#ifdef __linux__
+    static const size_t ConstTypeIDHash = 600831349;
+#else
+	static const size_t ConstTypeIDHash = 0x0a56f03038a03360ull;
+#endif
     for (auto& it : *bodyCode->instructions) {
         auto typeHash = typeid(*it.get()).hash_code();
-        auto typeN = typeid(*it.get()).raw_name();
+
+		//linux
+        //auto typeN = typeid(*it.get()).name();
+		//std::string stuff = std::to_string(typeHash) + " " + typeN;
+		//sqf::diag_log(stuff);
+
+
         if (typeHash != ConstTypeIDHash) continue;
-        GameInstructionConst* inst = static_cast<GameInstructionConst*>(it.get());
-        if (inst->value.type_enum() != GameDataType::CODE) continue;
+        auto inst = static_cast<GameInstructionConst*>(it.get());
+        if (inst->value.type_enum() != game_data_type::CODE) continue;
 
         auto bodyCode = static_cast<game_data_code*>(inst->value.data.get());
         if (bodyCode->instructions && bodyCode->instructions->size() > 20)
@@ -523,7 +542,7 @@ void addScopeInstruction(game_data_code* bodyCode, std::string scriptName) {
 }
 
 
-game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
+game_value compileRedirect2(const game_state& state, game_value_parameter message) {
 	if (!profiler.compileScope) {
 		static r_string compileEventText("compile");
 		static r_string profName("scriptProfiler.cpp");
@@ -532,7 +551,6 @@ game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
 
 	auto tempData = GProfilerAdapter->enterScope(profiler.compileScope);
 
-    game_state* state = reinterpret_cast<game_state*>(st);
     r_string str = message;
 
 	auto comp = sqf::compile(str);
@@ -542,10 +560,12 @@ game_value compileRedirect2(uintptr_t st, game_value_parameter message) {
 		return comp;
 	}
 
+#ifdef WITH_BROFILER
 	if (auto brofilerData = std::dynamic_pointer_cast<ScopeTempStorageBrofiler>(tempData)) {
 		r_string src = getScriptFromFirstLine(bodyCode->instructions->front()->sdp, false);
 		brofilerData->evtDt->sourceCode = src;
 	}
+#endif
 
 	GProfilerAdapter->leaveScope(tempData);
 
@@ -570,10 +590,12 @@ game_value callExtensionRedirect(uintptr_t st, game_value_parameter ext, game_va
 
     auto res = sqf::call_extension(ext,msg);
 
+#ifdef WITH_BROFILER
 	if (auto brofilerData = std::dynamic_pointer_cast<ScopeTempStorageBrofiler>(tempData)) {
 		brofilerData->evtDt->thisArgs = ext;
 		brofilerData->evtDt->sourceCode = msg;
 	}
+#endif
 
 	GProfilerAdapter->leaveScope(tempData);
 
@@ -581,21 +603,34 @@ game_value callExtensionRedirect(uintptr_t st, game_value_parameter ext, game_va
 }
 
 game_value diag_logRedirect(uintptr_t st, game_value_parameter msg) {
-	r_string str = (r_string)msg;
+	r_string str = static_cast<r_string>(msg);
 
 	GProfilerAdapter->addLog(str);
 	sqf::diag_log(msg);
 	return {};
 }
 
-
+std::string get_command_line() {
+#if __linux__
+    std::ifstream cmdline("/proc/self/cmdline");
+    std::string file_contents;
+    std::string line;
+    while (std::getline(cmdline, line)) {
+        file_contents += line;
+        file_contents.push_back('\n'); //#TODO can linux even have more than one line?
+    }
+    return file_contents;
+#else
+    return GetCommandLineA();
+#endif
+}
 
 std::optional<std::string> getCommandLineParam(std::string_view needle) {
-	std::string commandLine = GetCommandLineA();
-    auto found = commandLine.find(needle);
+	std::string commandLine = get_command_line();
+	const auto found = commandLine.find(needle);
     if (found != std::string::npos) {
-        auto spacePos = commandLine.find(' ', found + needle.length() + 1);
-        auto valueLength = spacePos - (found + needle.length() + 1);
+	    const auto spacePos = commandLine.find(' ', found + needle.length() + 1);
+	    const auto valueLength = spacePos - (found + needle.length() + 1);
         auto adapterStr = commandLine.substr(found + needle.length() + 1, valueLength);
         if (adapterStr.back() == '"')
             adapterStr = adapterStr.substr(0, adapterStr.length() - 1);
@@ -605,8 +640,6 @@ std::optional<std::string> getCommandLineParam(std::string_view needle) {
 }
 
 scriptProfiler::scriptProfiler() {
-	std::string commandLine = GetCommandLineA();
-
 	if (getCommandLineParam("-profilerEnableInstruction"sv)) {
 		instructionLevelProfiling = true;
 	}
@@ -614,15 +647,20 @@ scriptProfiler::scriptProfiler() {
 	auto startAdapter = getCommandLineParam("-profilerAdapter"sv);
 
     if (startAdapter) {
-		if (*startAdapter == "Chrome"sv) {
+		if (false) {
+#ifdef WITH_CHROME
+		} else if (*startAdapter == "Chrome"sv) {
 			auto chromeAdapter = std::make_shared<AdapterChrome>();
 			GProfilerAdapter = chromeAdapter;
 
 			auto chromeOutput = getCommandLineParam("-profilerOutput"sv);
 			if (chromeOutput)
 				chromeAdapter->setTargetFile(*chromeOutput);
+#endif
+#ifdef WITH_BROFILER
 		} else if (*startAdapter == "Brofiler"sv) {
 			GProfilerAdapter = std::make_shared<AdapterBrofiler>();
+#endif
 		} else if (*startAdapter == "Arma"sv) {
 			GProfilerAdapter = std::make_shared<AdapterArmaDiag>();
 		} else if (*startAdapter == "Tracy"sv) {
@@ -634,10 +672,7 @@ scriptProfiler::scriptProfiler() {
 
 
 }
-
-
-scriptProfiler::~scriptProfiler() {}
-
+#ifndef __linux__
 #pragma region Instructions
 namespace intercept::__internal {
 
@@ -715,7 +750,7 @@ namespace intercept::__internal {
 
 	class game_functions : public auto_array<gsFunction>, public gsFuncBase {
 	public:
-		game_functions(std::string name) : _name(name.c_str()) {}
+		game_functions(r_string name) : _name(std::move(name)) {}
 		r_string _name;
 		game_functions() noexcept {}
 		const char *get_map_key() const noexcept { return _name.data(); }
@@ -723,7 +758,7 @@ namespace intercept::__internal {
 
 	class game_operators : public auto_array<gsOperator>, public gsFuncBase {
 	public:
-		game_operators(std::string name) : _name(name.c_str()) {}
+		game_operators(r_string name) : _name(std::move(name)) {}
 		r_string _name;
 		int32_t placeholder10{ 4 }; //0x2C Small int 0-5  priority
 		game_operators() noexcept {}
@@ -943,13 +978,13 @@ public:
 };
 
 #pragma endregion Instructions
-
+#endif
 void scriptProfiler::preStart() {
-
+	#ifndef __linux__
     if (getCommandLineParam("-profilerEnableEngine"sv)) {
         engineProf = std::make_shared<EngineProfiling>();
     }
-
+	#endif
     static auto codeType = client::host::register_sqf_type("ProfileScope"sv, "ProfileScope"sv, "Dis is a profile scope. It profiles things."sv, "ProfileScope"sv, createGameDataProfileScope);
     GameDataProfileScope_type = codeType.second;
     static auto _createProfileScope = client::host::register_sqf_command("createProfileScope", "Creates a ProfileScope", createProfileScope, codeType.first, game_data_type::STRING);
@@ -973,7 +1008,7 @@ void scriptProfiler::preStart() {
 	static auto _profilerDiagLog = client::host::register_sqf_command("diag_log", "Profiler redirect", diag_logRedirect, game_data_type::NOTHING, game_data_type::ANY);
 	static auto _profilerProfScript = client::host::register_sqf_command("profileScript", "Profiler redirect", profileScript, game_data_type::ARRAY, game_data_type::ARRAY);
 
-
+#ifndef __linux__
 	auto iface = client::host::request_plugin_interface("sqf_asm_devIf", 1);
 	if (iface) {
 		GVt = *static_cast<vtables*>(*iface);
@@ -1030,7 +1065,7 @@ void scriptProfiler::preStart() {
 		//VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionNewExpression), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
 		//delete ins;
 	}
-
+#endif
 }
 
 
@@ -1041,13 +1076,17 @@ void scriptProfiler::perFrame() {
 	GProfilerAdapter->perFrame();
 
 	if (!waitForAdapter.empty()) {
-		if (waitForAdapter == "Chrome") {
+		if (false) {
+#ifdef WITH_CHROME	
+		} else if (waitForAdapter == "Chrome") {
 			auto chromeAdapter = std::dynamic_pointer_cast<AdapterChrome>(GProfilerAdapter);
 			if (!chromeAdapter) {
 				std::shared_ptr<ProfilerAdapter> newAdapter = std::make_shared<AdapterChrome>();
 				GProfilerAdapter.swap(newAdapter);
 				newAdapter->cleanup();
 			}
+#endif
+#ifdef WITH_BROFILER
 		} else if (waitForAdapter == "Brofiler") {
 			auto brofilerAdapter = std::dynamic_pointer_cast<AdapterBrofiler>(GProfilerAdapter);
 			if (!brofilerAdapter) {
@@ -1055,6 +1094,7 @@ void scriptProfiler::perFrame() {
 				GProfilerAdapter.swap(newAdapter);
 				newAdapter->cleanup();
 			}
+#endif
 		} else if (waitForAdapter == "Arma") {
 			auto armaAdapter = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
 			if (!armaAdapter) {

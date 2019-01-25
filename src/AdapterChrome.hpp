@@ -1,4 +1,5 @@
 #pragma once
+#ifdef WITH_CHROME
 #include "ProfilerAdapter.hpp"
 #include <filesystem>
 
@@ -11,7 +12,7 @@ class ScopeInfoChrome final: public ScopeInfo {
 public:
 	intercept::types::r_string name;
 	intercept::types::r_string file;
-	uint32_t line;
+	uint32_t line = 0;
 };
 
 enum class ChromeEventCategory {
@@ -54,7 +55,7 @@ class AdapterChrome final : public ProfilerAdapter
 {
 public:
 	AdapterChrome();
-	~AdapterChrome();
+	~AdapterChrome() = default;
 	void perFrame() override;
 	std::shared_ptr<ScopeInfo> createScope(intercept::types::r_string name, intercept::types::r_string filename,
 		uint32_t fileline) override;
@@ -73,3 +74,4 @@ private:
 	std::vector<ChromeEvent> storedEvents;
 };
 
+#endif

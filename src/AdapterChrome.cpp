@@ -1,6 +1,4 @@
 #include "AdapterChrome.hpp"
-#include <iostream>
-
 #include <fstream>
 
 void printClean(std::ofstream& str, intercept::types::r_string string) {
@@ -44,9 +42,6 @@ AdapterChrome::AdapterChrome() {
     profStart = std::chrono::high_resolution_clock::now();
     type = AdapterType::Chrome;
 }
-
-
-AdapterChrome::~AdapterChrome() {}
 
 void AdapterChrome::perFrame() {}
 

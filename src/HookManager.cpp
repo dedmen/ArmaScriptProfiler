@@ -1,15 +1,33 @@
 #include "HookManager.hpp"
-#include <windows.h>
-#include <psapi.h>
+#define __linux__
+#ifndef __linux__
+#include <Windows.h>
+#include <Psapi.h>
 #pragma comment (lib, "Psapi.lib")//GetModuleInformation
+#else
+#include <fstream>
+#endif
 
 //This is here because I want to keep includes of windows.h low
 HookManager::HookManager() {
-    MODULEINFO modInfo = { 0 };
-    HMODULE hModule = GetModuleHandle(NULL);
-    GetModuleInformation(GetCurrentProcess(), hModule, &modInfo, sizeof(MODULEINFO));
-    engineBase = reinterpret_cast<uintptr_t>(modInfo.lpBaseOfDll);
-    engineSize = static_cast<uintptr_t>(modInfo.SizeOfImage);
+    #ifdef __linux__
+        std::ifstream maps("/proc/self/maps");
+        uintptr_t start;
+        uintptr_t end;
+        char placeholder;
+        maps >> std::hex >> start >> placeholder >> end;
+        //link_map *lm = (link_map*) dlopen(0, RTLD_NOW);
+        //uintptr_t baseAddress = reinterpret_cast<uintptr_t>(lm->l_addr);
+        //uintptr_t moduleSize = 35000000; //35MB hardcoded till I find out how to detect it properly
+        engineBase = start;
+        engineSize = end - start;
+    #else
+        MODULEINFO modInfo = { 0 };
+        HMODULE hModule = GetModuleHandle(NULL);
+        GetModuleInformation(GetCurrentProcess(), hModule, &modInfo, sizeof(MODULEINFO));
+        engineBase = reinterpret_cast<uintptr_t>(modInfo.lpBaseOfDll);
+        engineSize = static_cast<uintptr_t>(modInfo.SizeOfImage);
+    #endif
 }
 
 bool HookManager::placeHook(hookTypes type, const Pattern& pat, uintptr_t jmpTo, uintptr_t & jmpBackRef, uint8_t jmpBackOffset, bool taintRax) {
@@ -43,7 +61,7 @@ uintptr_t HookManager::placeHook(uintptr_t offset, uintptr_t jmpTo, uint8_t jmpB
 }
 
 uintptr_t HookManager::placeHookTotalOffs(uintptr_t totalOffset, uintptr_t jmpTo, bool taintRax) {
-    DWORD dwVirtualProtectBackup;
+    unsigned long dwVirtualProtectBackup;
 
 
     /*
@@ -67,8 +85,9 @@ uintptr_t HookManager::placeHookTotalOffs(uintptr_t totalOffset, uintptr_t jmpTo
         push rax
         ret
          */
-
+#ifndef __linux__
         VirtualProtect(reinterpret_cast<LPVOID>(totalOffset), 12u, 0x40u, &dwVirtualProtectBackup);
+#endif
         auto memberRax = reinterpret_cast<unsigned char*>(totalOffset);
         auto jmpInstr1 = reinterpret_cast<unsigned char*>(totalOffset+1);
         auto jmpInstr2 = reinterpret_cast<unsigned char*>(totalOffset+2);
@@ -81,10 +100,14 @@ uintptr_t HookManager::placeHookTotalOffs(uintptr_t totalOffset, uintptr_t jmpTo
         auto pushInstr = reinterpret_cast<unsigned char*>(totalOffset + 11);
         *pushInstr = 0x50; //push rax
         *reinterpret_cast<unsigned char*>(totalOffset + 12) = 0xc3;//ret
+        #ifndef __linux__
         VirtualProtect(reinterpret_cast<LPVOID>(totalOffset), 12u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
+        #endif
         return totalOffset + 12;
     } else {
+        #ifndef __linux__
         VirtualProtect(reinterpret_cast<LPVOID>(totalOffset), 14u, 0x40u, &dwVirtualProtectBackup);
+        #endif
         auto jmpInstr = reinterpret_cast<unsigned char*>(totalOffset);
         auto addrOffs = reinterpret_cast<uint32_t*>(totalOffset + 1);
         *jmpInstr = 0x68; //push DWORD
@@ -92,18 +115,24 @@ uintptr_t HookManager::placeHookTotalOffs(uintptr_t totalOffset, uintptr_t jmpTo
         *reinterpret_cast<uint32_t*>(totalOffset + 5) = 0x042444C7; //MOV [RSP+4],
         *reinterpret_cast<uint32_t*>(totalOffset + 9) = static_cast<uint64_t>(jmpTo) >> 32;//DWORD
         *reinterpret_cast<unsigned char*>(totalOffset + 13) = 0xc3;//ret
+        #ifndef __linux__
         VirtualProtect(reinterpret_cast<LPVOID>(totalOffset), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
+        #endif
         return totalOffset + 14;
     }
 
 
 #else
+    #ifndef __linux__
     VirtualProtect(reinterpret_cast<LPVOID>(totalOffset), 5u, 0x40u, &dwVirtualProtectBackup);
+    #endif
     auto jmpInstr = reinterpret_cast<unsigned char *>(totalOffset);
     auto addrOffs = reinterpret_cast<unsigned int *>(totalOffset + 1);
     *jmpInstr = 0xE9;
     *addrOffs = jmpTo - totalOffset - 5;
+    #ifndef __linux__
     VirtualProtect(reinterpret_cast<LPVOID>(totalOffset), 5u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
+    #endif
     return totalOffset + 5;
 #endif
 
@@ -111,24 +140,24 @@ uintptr_t HookManager::placeHookTotalOffs(uintptr_t totalOffset, uintptr_t jmpTo
 }
 
 
-bool HookManager::MatchPattern(uintptr_t addr, const char* pattern, const char* mask) {
-    size_t size = strlen(mask);
-    if (IsBadReadPtr((void*) addr, size))
+bool HookManager::MatchPattern(uintptr_t addr, std::string_view pattern, std::string_view mask) {
+    size_t size = mask.length();
+    #ifndef __linux__
+    if (IsBadReadPtr(reinterpret_cast<void*>(addr), size))
         return false;
+    #endif
     bool found = true;
     for (size_t j = 0; j < size; j++) {
-        found &= mask[j] == '?' || pattern[j] == *(char*) (addr + j);
+        found &= mask[j] == '?' || pattern[j] == *reinterpret_cast<char*>(addr + j);
     }
-    if (found)
-        return true;
-    return false;
+    return found;
 }
 
-uintptr_t HookManager::findPattern(const char* pattern, const char* mask, uintptr_t offset /*= 0*/) {
+uintptr_t HookManager::findPattern(std::string_view pattern, std::string_view mask, uintptr_t offset /*= 0*/) const {
     uintptr_t base = engineBase;
     uint32_t size = engineSize;
 
-    uintptr_t patternLength = (DWORD) strlen(mask);
+    uintptr_t patternLength = mask.length();
 
     for (uintptr_t i = 0; i < size - patternLength; i++) {
         bool found = true;
@@ -143,7 +172,7 @@ uintptr_t HookManager::findPattern(const char* pattern, const char* mask, uintpt
     return 0x0;
 }
 
-uintptr_t HookManager::findPattern(const Pattern & pat, uintptr_t offset) {
+uintptr_t HookManager::findPattern(const Pattern & pat, uintptr_t offset) const {
     if (pat.offsetFunc) {
         auto found = findPattern(pat.pattern, pat.mask, pat.offset + offset);
         if (found)
