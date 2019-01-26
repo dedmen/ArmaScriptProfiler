@@ -91,7 +91,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;$(SolutionDir)..\tracy;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WITH_BROFILER;WITH_CHROME;_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
@@ -106,7 +106,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;$(SolutionDir)..\tracy;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WITH_BROFILER;WITH_CHROME;_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
@@ -120,7 +120,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;$(SolutionDir)..\tracy;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WITH_BROFILER;WITH_CHROME;_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
@@ -142,7 +142,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;$(SolutionDir)..\tracy;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WITH_BROFILER;WITH_CHROME;_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
@@ -234,9 +234,7 @@
     <ClCompile Include="..\intercept\src\client\intercept\shared\containers.cpp" />
     <ClCompile Include="..\intercept\src\client\intercept\shared\types.cpp" />
     <ClCompile Include="AdapterArmaDiag.cpp" />
-    <ClCompile Include="AdapterBrofiler.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
+    <ClCompile Include="AdapterBrofiler.cpp" />
     <ClCompile Include="AdapterChrome.cpp" />
     <ClCompile Include="AdapterTracy.cpp" />
     <ClCompile Include="EngineProfiling.cpp" />

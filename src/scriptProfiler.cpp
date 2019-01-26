@@ -13,6 +13,8 @@
 #include "Event.h"
 #include "AdapterChrome.hpp"
 #include "AdapterTracy.hpp"
+#include <memory>
+#include <string>
 
 using namespace intercept;
 using namespace std::chrono_literals;
@@ -579,6 +581,46 @@ game_value compileRedirect2(const game_state& state, game_value_parameter messag
     return comp;
 }
 
+game_value compileRedirectFinal(const game_state& state, game_value_parameter message) {
+    if (!profiler.compileScope) {
+        static r_string compileEventText("compile");
+        static r_string profName("scriptProfiler.cpp");
+        profiler.compileScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
+    }
+
+    auto tempData = GProfilerAdapter->enterScope(profiler.compileScope);
+
+    r_string str = message;
+
+    auto comp = sqf::compile_final(str);
+    auto bodyCode = static_cast<game_data_code*>(comp.data.get());
+    if (!bodyCode->instructions) {
+        GProfilerAdapter->leaveScope(tempData);
+        return comp;
+    }
+
+#ifdef WITH_BROFILER
+    if (auto brofilerData = std::dynamic_pointer_cast<ScopeTempStorageBrofiler>(tempData)) {
+        r_string src = getScriptFromFirstLine(bodyCode->instructions->front()->sdp, false);
+        brofilerData->evtDt->sourceCode = src;
+    }
+#endif
+
+    GProfilerAdapter->leaveScope(tempData);
+
+    auto& funcPath = bodyCode->instructions->front()->sdp.sourcefile;
+    std::string scriptName = getScriptName(str, funcPath, 32);
+    //if (scriptName.empty()) scriptName = "<unknown>";
+
+    if (bodyCode->instructions && !scriptName.empty() && scriptName != "<unknown>")
+        addScopeInstruction(bodyCode, scriptName);
+
+    return comp;
+}
+
+
+
+
 game_value callExtensionRedirect(uintptr_t st, game_value_parameter ext, game_value_parameter msg) {
 	if (!profiler.callExtScope) {
 		static r_string compileEventText("callExtension");
@@ -640,36 +682,6 @@ std::optional<std::string> getCommandLineParam(std::string_view needle) {
 }
 
 scriptProfiler::scriptProfiler() {
-	if (getCommandLineParam("-profilerEnableInstruction"sv)) {
-		instructionLevelProfiling = true;
-	}
-
-	auto startAdapter = getCommandLineParam("-profilerAdapter"sv);
-
-    if (startAdapter) {
-		if (false) {
-#ifdef WITH_CHROME
-		} else if (*startAdapter == "Chrome"sv) {
-			auto chromeAdapter = std::make_shared<AdapterChrome>();
-			GProfilerAdapter = chromeAdapter;
-
-			auto chromeOutput = getCommandLineParam("-profilerOutput"sv);
-			if (chromeOutput)
-				chromeAdapter->setTargetFile(*chromeOutput);
-#endif
-#ifdef WITH_BROFILER
-		} else if (*startAdapter == "Brofiler"sv) {
-			GProfilerAdapter = std::make_shared<AdapterBrofiler>();
-#endif
-		} else if (*startAdapter == "Arma"sv) {
-			GProfilerAdapter = std::make_shared<AdapterArmaDiag>();
-		} else if (*startAdapter == "Tracy"sv) {
-            GProfilerAdapter = std::make_shared<AdapterTracy>();
-        }
-    } else {
-	    GProfilerAdapter = std::make_shared<AdapterTracy>();
-    }
-
 
 }
 #ifndef __linux__
@@ -980,6 +992,45 @@ public:
 #pragma endregion Instructions
 #endif
 void scriptProfiler::preStart() {
+
+    if (getCommandLineParam("-profilerEnableInstruction"sv)) {
+        instructionLevelProfiling = true;
+    }
+
+    auto startAdapter = getCommandLineParam("-profilerAdapter"sv);
+
+    if (startAdapter) {
+        if (false) {
+#ifdef WITH_CHROME
+        }
+        else if (*startAdapter == "Chrome"sv) {
+            auto chromeAdapter = std::make_shared<AdapterChrome>();
+            GProfilerAdapter = chromeAdapter;
+
+            auto chromeOutput = getCommandLineParam("-profilerOutput"sv);
+            if (chromeOutput)
+                chromeAdapter->setTargetFile(*chromeOutput);
+#endif
+#ifdef WITH_BROFILER
+        }
+        else if (*startAdapter == "Brofiler"sv) {
+            GProfilerAdapter = std::make_shared<AdapterBrofiler>();
+#endif
+        }
+        else if (*startAdapter == "Arma"sv) {
+            GProfilerAdapter = std::make_shared<AdapterArmaDiag>();
+        }
+        else if (*startAdapter == "Tracy"sv) {
+            GProfilerAdapter = std::make_shared<AdapterTracy>();
+        }
+    }
+    else {
+        GProfilerAdapter = std::make_shared<AdapterTracy>();
+    }
+
+
+
+
 	#ifndef __linux__
     if (getCommandLineParam("-profilerEnableEngine"sv)) {
         engineProf = std::make_shared<EngineProfiling>();
@@ -1003,7 +1054,7 @@ void scriptProfiler::preStart() {
 	static auto _profilerCompile = client::host::register_sqf_command("compile", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
     //static auto _profilerCompile2 = client::host::register_sqf_command("compile2", "Profiler redirect", compileRedirect, game_data_type::CODE, game_data_type::STRING);
     //static auto _profilerCompile3 = client::host::register_sqf_command("compile3", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
-    static auto _profilerCompileF = client::host::register_sqf_command("compileFinal", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
+    static auto _profilerCompileF = client::host::register_sqf_command("compileFinal", "Profiler redirect", compileRedirectFinal, game_data_type::CODE, game_data_type::STRING);
 	static auto _profilerCallExt = client::host::register_sqf_command("callExtension", "Profiler redirect", callExtensionRedirect, game_data_type::STRING, game_data_type::STRING, game_data_type::STRING);
 	static auto _profilerDiagLog = client::host::register_sqf_command("diag_log", "Profiler redirect", diag_logRedirect, game_data_type::NOTHING, game_data_type::ANY);
 	static auto _profilerProfScript = client::host::register_sqf_command("profileScript", "Profiler redirect", profileScript, game_data_type::ARRAY, game_data_type::ARRAY);
