@@ -89,7 +89,7 @@ public:
 #ifdef __linux__
 			game_value(),
 #else
-            state.eval->local->variables.get("_this").value,
+            state.get_local_variable("_this"),
 #endif
 			scopeInfo);
 
@@ -99,10 +99,7 @@ public:
 				chromeStorage->threadID = reinterpret_cast<uint64_t>(&ctx);
 		}
 #endif
-
-        state.eval->local->variables.insert(
-            game_variable("1scp"sv, game_value(new GameDataProfileScope(std::move(data))), false)
-        );
+		state.set_local_variable("1scp"sv, game_value(new GameDataProfileScope(std::move(data))), false);
         lastScopeStart = name;
 
         return false;
@@ -112,7 +109,7 @@ public:
     ~GameInstructionProfileScopeStart() override = default;
 };
 
-game_value createProfileScope(const game_state& state, game_value_parameter name) {
+game_value createProfileScope(game_state&, game_value_parameter name) {
     if (sqf::can_suspend()) return {};
     static r_string profName("scriptProfiler.cpp");
 
@@ -171,7 +168,7 @@ game_value profilerLog(uintptr_t, game_value_parameter message) {
     return {};
 }
 
-game_value profilerSetOutputFile(const game_state& state, game_value_parameter file) {
+game_value profilerSetOutputFile(game_state& state, game_value_parameter file) {
 #ifdef WITH_CHROME
 	auto chromeAdapter = std::dynamic_pointer_cast<AdapterChrome>(GProfilerAdapter);
 	if (!chromeAdapter) {
@@ -200,7 +197,7 @@ game_value profilerSetCounter(uintptr_t st, game_value_parameter name, game_valu
 }
 
 //profiles script like diag_codePerformance
-game_value profileScript(const game_state& state, game_value_parameter par) {
+game_value profileScript(game_state& state, game_value_parameter par) {
 	code _code = par[0];
 	int runs = par.get(2).value_or(10000);
 
@@ -209,7 +206,8 @@ game_value profileScript(const game_state& state, game_value_parameter par) {
 	//CBA fastForEach
 
 	if (par.get(1) && !par[1].is_nil()) {
-		state.eval->local->variables.insert({ "_this"sv,  par[1] });
+		//#TODO we want to create a subscope
+		state.set_local_variable("_this"sv, par[1]);
 	}
 
 	//prep for action
@@ -544,7 +542,7 @@ void addScopeInstruction(game_data_code* bodyCode, const std::string& scriptName
 }
 
 
-game_value compileRedirect2(const game_state& state, game_value_parameter message) {
+game_value compileRedirect2(game_state& state, game_value_parameter message) {
 	if (!profiler.compileScope) {
 		static r_string compileEventText("compile");
 		static r_string profName("scriptProfiler.cpp");
@@ -572,6 +570,7 @@ game_value compileRedirect2(const game_state& state, game_value_parameter messag
 	GProfilerAdapter->leaveScope(tempData);
 
     auto& funcPath = bodyCode->instructions->front()->sdp.sourcefile;
+	//#TODO pass instructions to getScriptName and check if there is a "scriptName" or "scopeName" unary command call
     std::string scriptName = getScriptName(str, funcPath, 32);
     //if (scriptName.empty()) scriptName = "<unknown>";
 
@@ -581,7 +580,7 @@ game_value compileRedirect2(const game_state& state, game_value_parameter messag
     return comp;
 }
 
-game_value compileRedirectFinal(const game_state& state, game_value_parameter message) {
+game_value compileRedirectFinal(game_state& state, game_value_parameter message) {
     if (!profiler.compileScope) {
         static r_string compileEventText("compile");
         static r_string profName("scriptProfiler.cpp");

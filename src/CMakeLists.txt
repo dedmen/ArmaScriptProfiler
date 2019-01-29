@@ -59,6 +59,8 @@ endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX)
 	list(REMOVE_ITEM INTERCEPT_ASP_SOURCES "${CMAKE_SOURCE_DIR}/src/hooks.asm")
+else()
+	list(REMOVE_ITEM INTERCEPT_ASP_SOURCES "${CMAKE_SOURCE_DIR}/src/hooks.s")
 endif()
 
 set(library_sources ${INTERCEPT_ASP_SOURCES})

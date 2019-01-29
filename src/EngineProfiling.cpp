@@ -128,8 +128,8 @@ EngineProfiling::EngineProfiling() {
     armaP->capture = true;
 
     //disable captureSlowFrame because it can set forceCapture to false
-    //static auto stuff = intercept::client::host::register_sqf_command("diag_captureSlowFrame"sv, ""sv, [](const game_state&, game_value_parameter) -> game_value
-    //    {
-    //        return {};
-    //    }, game_data_type::NOTHING, game_data_type::ARRAY);
+    static auto stuff = intercept::client::host::register_sqf_command("diag_captureSlowFrame"sv, ""sv, [](game_state&, game_value_parameter) -> game_value
+        {
+            return {};
+        }, game_data_type::NOTHING, game_data_type::ARRAY);
 }
