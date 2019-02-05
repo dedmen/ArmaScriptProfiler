@@ -123,47 +123,47 @@ game_value createProfileScope(game_state&, game_value_parameter name) {
     return game_value(new GameDataProfileScope(std::move(data)));
 }
 
-game_value profilerSleep(uintptr_t) {
+game_value profilerSleep(game_state&) {
     std::this_thread::sleep_for(17ms);
     return {};
 }
 
-game_value profilerCaptureFrame(uintptr_t) {
+game_value profilerCaptureFrame(game_state&) {
 	auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
 	if (!armaDiagProf) return {};
 	armaDiagProf->captureFrame();
     return {};
 }
 
-game_value profilerCaptureFrames(uintptr_t, game_value_parameter count) {
+game_value profilerCaptureFrames(game_state&, game_value_parameter count) {
 	auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
 	if (!armaDiagProf) return {};
-	armaDiagProf->captureFrames(static_cast<float>(count));
+	armaDiagProf->captureFrames(static_cast<uint32_t>(static_cast<float>(count)));
     return {};
 }
 
-game_value profilerCaptureSlowFrame(uintptr_t, game_value_parameter threshold) {
+game_value profilerCaptureSlowFrame(game_state&, game_value_parameter threshold) {
 	auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
 	if (!armaDiagProf) return {};
 	armaDiagProf->captureSlowFrame(chrono::milliseconds(static_cast<float>(threshold)));
     return {};
 }
 
-game_value profilerCaptureTrigger(uintptr_t) {
+game_value profilerCaptureTrigger(game_state&) {
 	auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
 	if (!armaDiagProf) return {};
 	armaDiagProf->captureTrigger();
     return {};
 }
 
-game_value profilerTrigger(uintptr_t) {
+game_value profilerTrigger(game_state&) {
  auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
 	if (!armaDiagProf) return {};
 	armaDiagProf->profilerTrigger();
     return {};
 }
 
-game_value profilerLog(uintptr_t, game_value_parameter message) {
+game_value profilerLog(game_state&, game_value_parameter message) {
 	GProfilerAdapter->addLog(message);
     return {};
 }
@@ -172,9 +172,7 @@ game_value profilerSetOutputFile(game_state& state, game_value_parameter file) {
 #ifdef WITH_CHROME
 	auto chromeAdapter = std::dynamic_pointer_cast<AdapterChrome>(GProfilerAdapter);
 	if (!chromeAdapter) {
-		state.eval->_errorMessage = "not using ChromeAdapter";
-		state.eval->_errorType = game_state::game_evaluator::evaluator_error_type::tg90; //No idea what tg90 is..
-
+		state.set_script_error(game_state::game_evaluator::evaluator_error_type::bad_var, "not using ChromeAdapter"sv);
 		return {};
 	}
 
@@ -183,7 +181,7 @@ game_value profilerSetOutputFile(game_state& state, game_value_parameter file) {
 	return {};
 }
 
-game_value profilerSetAdapter(uintptr_t st, game_value_parameter file) {
+game_value profilerSetAdapter(game_state&, game_value_parameter file) {
 	
 	r_string adap = file;
 
@@ -191,7 +189,7 @@ game_value profilerSetAdapter(uintptr_t st, game_value_parameter file) {
 	return {};
 }
 
-game_value profilerSetCounter(uintptr_t st, game_value_parameter name, game_value_parameter value) {
+game_value profilerSetCounter(game_state&, game_value_parameter name, game_value_parameter value) {
 	GProfilerAdapter->setCounter(name,value);
 	return {};
 }
@@ -374,7 +372,7 @@ std::string getScriptFromFirstLine(sourcedocpos& pos, bool compact) {//https://g
 	auto readLineMacro = [&]() {
 		curPos += 6;
 		auto numberEnd = std::find(curPos, end, ' ');
-		auto number = std::stoi(std::string(static_cast<const char*>(curPos), numberEnd - curPos));
+		auto number = std::stoul(std::string(static_cast<const char*>(curPos), numberEnd - curPos));
 		curPos = numberEnd + 2;
 		auto nameEnd = std::find(curPos, end, '"');
 		std::string name(static_cast<const char*>(curPos), nameEnd - curPos);
@@ -620,7 +618,7 @@ game_value compileRedirectFinal(game_state& state, game_value_parameter message)
 
 
 
-game_value callExtensionRedirect(uintptr_t st, game_value_parameter ext, game_value_parameter msg) {
+game_value callExtensionRedirect(game_state&, game_value_parameter ext, game_value_parameter msg) {
 	if (!profiler.callExtScope) {
 		static r_string compileEventText("callExtension");
 		static r_string profName("scriptProfiler.cpp");
@@ -643,7 +641,7 @@ game_value callExtensionRedirect(uintptr_t st, game_value_parameter ext, game_va
 	return res;
 }
 
-game_value diag_logRedirect(uintptr_t st, game_value_parameter msg) {
+game_value diag_logRedirect(game_state&, game_value_parameter msg) {
 	r_string str = static_cast<r_string>(msg);
 
 	GProfilerAdapter->addLog(str);
