@@ -15,8 +15,8 @@ public:
 
 class ScopeTempStorageTracy final : public ScopeTempStorage {
 public:
-	 std::unique_ptr<tracy::ScopedZone> zone;
-     std::thread::id origin;
+    std::unique_ptr<tracy::ScopedZone> zone;
+    std::thread::id origin;
 };
 
 AdapterTracy::AdapterTracy() {

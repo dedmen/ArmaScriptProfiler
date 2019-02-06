@@ -11,6 +11,7 @@ enum class hookTypes {
     shouldTime,   //FrameEnd/FrameStart
     doEnd,
     scopeCompleted,
+    frameEnd,
     End
 };
 

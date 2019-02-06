@@ -11,4 +11,8 @@
 	###########
 	.global scopeCompleted
     scopeCompleted:
-        jmp     _ZN8ArmaProf14scopeCompletedExxPvPx
+        jmp     _ZN8ArmaProf14scopeCompletedExxPN9intercept5types8r_stringEP8PCounter
+
+	.global frameEnd
+    frameEnd:
+        jmp     _ZN8ArmaProf8frameEndEffi

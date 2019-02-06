@@ -1026,13 +1026,14 @@ void scriptProfiler::preStart() {
     }
 
 
-
-
-	#ifndef __linux__
     if (getCommandLineParam("-profilerEnableEngine"sv)) {
-        engineProf = std::make_shared<EngineProfiling>();
+		if (intercept::sqf::product_version().branch != "Profile") {
+			intercept::sqf::diag_log("ERROR ArmaScriptProfiler: Cannot enable engine profiling without Profiling build of Arma");
+		} else {
+			engineProf = std::make_shared<EngineProfiling>();
+			engineFrameEnd = true;
+		}
     }
-	#endif
     static auto codeType = client::host::register_sqf_type("ProfileScope"sv, "ProfileScope"sv, "Dis is a profile scope. It profiles things."sv, "ProfileScope"sv, createGameDataProfileScope);
     GameDataProfileScope_type = codeType.second;
     static auto _createProfileScope = client::host::register_sqf_command("createProfileScope", "Creates a ProfileScope", createProfileScope, codeType.first, game_data_type::STRING);
@@ -1121,7 +1122,8 @@ client::EHIdentifierHandle endFrameHandle;
 
 
 void scriptProfiler::perFrame() {
-	GProfilerAdapter->perFrame();
+	if (!engineFrameEnd)
+		GProfilerAdapter->perFrame();
 
 	if (!waitForAdapter.empty()) {
 		if (false) {

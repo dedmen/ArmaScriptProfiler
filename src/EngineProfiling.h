@@ -41,7 +41,7 @@ class ArmaProf {
 public:
 
     void scopeCompleted(int64_t start, int64_t end, intercept::types::r_string* stuff, PCounter* stuff2);
-
+	void frameEnd(float fps, float time, int smth);
 
 public:
 	//This is engine stuff.
@@ -69,8 +69,10 @@ public:
 	intercept::types::auto_array<void*> stuffz4;
 
 	bool megaOof;
+#ifndef __linux__
 	int64_t ouf1;
 	int64_t ouf2;
+#endif
 	int64_t ouf3;
 	int64_t ouf4;
 	int64_t ouf5;
@@ -79,7 +81,11 @@ public:
 	intercept::types::r_string blip;
 	float blop;
 
-    float dummy, dummy2, dummy3;//no idea what dis is.. Stuff above is probably wrong somewhere
+    float dummy
+#ifndef __linux__
+	, dummy2, dummy3
+#endif
+	;//no idea what dis is.. Stuff above is probably wrong somewhere
 
     bool forceCapture;
     bool capture;

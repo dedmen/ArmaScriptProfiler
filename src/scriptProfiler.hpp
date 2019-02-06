@@ -20,6 +20,7 @@ public:
     std::shared_ptr<ScopeInfo> callExtScope;
     intercept::types::r_string waitForAdapter;
     std::shared_ptr<EngineProfiling> engineProf;
+    bool engineFrameEnd = false;
 };
 
 extern scriptProfiler profiler;

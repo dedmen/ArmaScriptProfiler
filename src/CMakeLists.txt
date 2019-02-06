@@ -102,7 +102,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 	target_compile_options(
 		${INTERCEPT_PLUGIN_NAME} PRIVATE 
 		"-std=c++1z"
-		"-O2"
+		"-O3"
 		"-s"
 		"-fPIC"
 		"-fpermissive"
@@ -112,8 +112,14 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 		"-m32"
 		"-Wno-ignored-attributes"
 		"-static"
+		"$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-ffunction-sections>"
+		"$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-fdata-sections>"
+
 	)
-	target_link_options(${INTERCEPT_PLUGIN_NAME} PRIVATE "-m32" "-fPIC" "-static" "-static-libgcc" "-static-libstdc++") 
+	target_link_options(${INTERCEPT_PLUGIN_NAME} PRIVATE "-m32" "-fPIC" "-static" "-static-libgcc" "-static-libstdc++"
+	"$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-Wl,--gc-sections>"
+	"$<$<OR:$<CONFIG:Release>>:-Wl,--strip-all>"
+	) 
 	set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 else()
 

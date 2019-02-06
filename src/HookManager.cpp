@@ -1,5 +1,4 @@
 #include "HookManager.hpp"
-#define __linux__
 #ifndef __linux__
 #include <Windows.h>
 #include <Psapi.h>
@@ -59,6 +58,11 @@ uintptr_t HookManager::placeHook(uintptr_t offset, uintptr_t jmpTo, uint8_t jmpB
     auto totalOffset = offset + engineBase;
     return placeHookTotalOffs(totalOffset, jmpTo) + jmpBackOffset;
 }
+
+#ifdef __linux__
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
 
 uintptr_t HookManager::placeHookTotalOffs(uintptr_t totalOffset, uintptr_t jmpTo, bool taintRax) {
     unsigned long dwVirtualProtectBackup;
@@ -123,16 +127,20 @@ uintptr_t HookManager::placeHookTotalOffs(uintptr_t totalOffset, uintptr_t jmpTo
 
 
 #else
-    #ifndef __linux__
+
+#ifndef __linux__
     VirtualProtect(reinterpret_cast<LPVOID>(totalOffset), 5u, 0x40u, &dwVirtualProtectBackup);
-    #endif
+#else
+    void* page =reinterpret_cast<void *>(static_cast<unsigned long>(totalOffset & ~(getpagesize() - 1)));
+    auto mret = mprotect(page, getpagesize(), PROT_READ|PROT_WRITE|PROT_EXEC);
+#endif
     auto jmpInstr = reinterpret_cast<unsigned char *>(totalOffset);
     auto addrOffs = reinterpret_cast<unsigned int *>(totalOffset + 1);
     *jmpInstr = 0xE9;
     *addrOffs = jmpTo - totalOffset - 5;
-    #ifndef __linux__
+#ifndef __linux__
     VirtualProtect(reinterpret_cast<LPVOID>(totalOffset), 5u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
-    #endif
+#endif
     return totalOffset + 5;
 #endif
 
