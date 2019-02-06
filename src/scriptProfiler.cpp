@@ -488,7 +488,7 @@ void addScopeInstruction(game_data_code* bodyCode, const std::string& scriptName
     auto rt = typeid(GameInstructionProfileScopeStart).hash_code();
 
     if (lt == rt) return;
-
+    if (bodyCode->instructions->size() < 4) return;
 
 
     auto& funcPath = bodyCode->instructions->front()->sdp.sourcefile;
