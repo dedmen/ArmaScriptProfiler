@@ -90,7 +90,6 @@ target_link_libraries (${INTERCEPT_PLUGIN_NAME} ${CMAKE_THREAD_LIBS_INIT})
 
 target_link_libraries(${INTERCEPT_PLUGIN_NAME} ${LINK_LIBS})
 
-target_link_libraries(${INTERCEPT_PLUGIN_NAME} ${LINK_LIBS})
 set_target_properties(${INTERCEPT_PLUGIN_NAME} PROPERTIES PREFIX "")
 set_target_properties(${INTERCEPT_PLUGIN_NAME} PROPERTIES FOLDER ArmaScriptProfiler)
 message("${CONFIGURATION}")
@@ -102,7 +101,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 	target_compile_options(
 		${INTERCEPT_PLUGIN_NAME} PRIVATE 
 		"-std=c++1z"
-		"-O3"
+		"$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>"
 		"-s"
 		"-fPIC"
 		"-fpermissive"
@@ -121,6 +120,9 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 	"$<$<OR:$<CONFIG:Release>>:-Wl,--strip-all>"
 	) 
 	set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+
+	target_link_libraries(${INTERCEPT_PLUGIN_NAME} "libstdc++.a")
+
 else()
 
 	target_compile_options(

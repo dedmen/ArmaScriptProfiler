@@ -32,13 +32,16 @@ public:
 			if (!scopeInfo) return;
 
 			scopeTempStorage = GProfilerAdapter->enterScope(scopeInfo);
+#ifdef WITH_BROFILER
 			GProfilerAdapter->setThisArgs(scopeTempStorage, std::move(thisArgs));
+#endif
         }
         ~scopeData() {
 			GProfilerAdapter->leaveScope(scopeTempStorage);
         }
 		std::shared_ptr<ScopeTempStorage> scopeTempStorage;
 		r_string name;
+        //sourcedocpos createPos;
     };
 
     GameDataProfileScope() = default;
@@ -84,22 +87,64 @@ public:
     bool exec(game_state& state, vm_context& ctx) override {
         static r_string lastScopeStart;
 	    if ((!GProfilerAdapter->IsScheduledSupported() &&/*ctx.scheduled || */sqf::can_suspend()) || (lastScopeStart.length() && lastScopeStart == name)) return false;
+       
+        auto ev = state.get_evaluator();
+
+        //if (!ev->local->variables.is_null(ev->local->variables.get("1scp"sv)))
+        //    return false;
 
         auto data = std::make_shared<GameDataProfileScope::scopeData>(name,
-#ifdef __linux__
-			game_value(),
-#else
+#ifdef WITH_BROFILER
             state.get_local_variable("_this"),
+#else
+            game_value(),
 #endif
 			scopeInfo);
-
+        //data->createPos = ctx.get_current_position();
 #ifdef WITH_CHROME
 		if (GProfilerAdapter->IsScheduledSupported() && sqf::can_suspend()) {
 			if (auto chromeStorage = std::dynamic_pointer_cast<ScopeTempStorageChrome>(data->scopeTempStorage))
 				chromeStorage->threadID = reinterpret_cast<uint64_t>(&ctx);
 		}
 #endif
+        //if (name == "CBA_fnc_preInit") {
+        //    sqf::diag_log("preinitNow");
+        //
+        //
+        //    if (!ev->local->variables.is_null(ev->local->variables.get("1scp"sv)))
+        //        sqf::diag_log("scopeAlreadyExists");
+        //
+        //    sqf::diag_log("curP " + ctx.get_current_position().sourcefile + ":" + std::to_string(ctx.get_current_position().sourceline));
+        //
+        //    auto vsp = ev->local;
+        //    r_string spacing(""sv);
+        //    while (vsp) {
+        //        for (auto& it : vsp->variables) {
+        //            sqf::diag_log(spacing+it.get_map_key());
+        //            if (it.get_map_key() == "1scp") {
+        //                auto gd1 = it.value.get_as<GameDataProfileScope>();
+        //                sqf::diag_log(spacing + "-" + gd1->data->name);
+        //                sqf::diag_log(spacing + "+" + gd1->data->createPos.sourcefile+":"+std::to_string(gd1->data->createPos.sourceline));
+        //            }
+        //
+        //
+        //        }
+        //
+        //        vsp = vsp->parent;
+        //        spacing += " ";
+        //    }
+        //}
+          
 		state.set_local_variable("1scp"sv, game_value(new GameDataProfileScope(std::move(data))), false);
+
+        //if (name == "CBA_fnc_preInit") {
+        //    sqf::diag_log("preinitPush");
+        //    for (auto& it : ev->local->variables) {
+        //        sqf::diag_log(it.get_map_key());
+        //    }
+        //}
+        
+
         lastScopeStart = name;
 
         return false;
@@ -356,7 +401,7 @@ std::string getScriptFromFirstLine(sourcedocpos& pos, bool compact) {//https://g
 	bool inWantedFile = needSourceFile;
 	output.reserve(end - start);
 
-	auto removeEmptyLines = [&](int count) {
+	auto removeEmptyLines = [&](size_t count) {
 		for (size_t i = 0; i < count; i++) {
 			auto found = output.find("\n\n");
 			if (found != std::string::npos)
@@ -521,6 +566,12 @@ void addScopeInstruction(game_data_code* bodyCode, const std::string& scriptName
 	static const size_t ConstTypeIDHash = 0x0a56f03038a03360ull;
 #endif
     for (auto& it : *bodyCode->instructions) {
+
+        auto instC = dynamic_cast<GameInstructionProfileScopeStart*>(it.get());
+        if (instC) {
+            break;
+        }
+
         auto typeHash = typeid(*it.get()).hash_code();
 
 		//linux
@@ -533,9 +584,9 @@ void addScopeInstruction(game_data_code* bodyCode, const std::string& scriptName
         auto inst = static_cast<GameInstructionConst*>(it.get());
         if (inst->value.type_enum() != game_data_type::CODE) continue;
 
-        auto bodyCode = static_cast<game_data_code*>(inst->value.data.get());
-        if (bodyCode->instructions && bodyCode->instructions->size() > 20)
-           addScopeInstruction(bodyCode, scriptName);
+        auto bodyCodeNext = static_cast<game_data_code*>(inst->value.data.get());
+        if (bodyCodeNext->instructions && bodyCodeNext->instructions->size() > 20)
+           addScopeInstruction(bodyCodeNext, scriptName);
     }
 }
 

@@ -7,7 +7,8 @@ _TEXT    SEGMENT
     EXTERN ?shouldTime@PCounter@@QEAA_NXZ:              PROC;   PCounter::shouldTime
     EXTERN ?doEnd@ScopeProf@@QEAAXXZ:					PROC;   ScopeProf::doEnd
     EXTERN ?scopeCompleted@ArmaProf@@QEAAX_J0PEAVr_string@types@intercept@@PEAVPCounter@@@Z:					PROC;   ArmaProf::scopeCompleted
-
+    EXTERN ?frameEnd@ArmaProf@@QEAAXMMH@Z:				PROC;   ArmaProf::frameEnd
+	
     ;JmpBacks
     EXTERN profEndJmpback:								qword
 
@@ -57,6 +58,13 @@ _TEXT    SEGMENT
     scopeCompleted PROC
         jmp     ?scopeCompleted@ArmaProf@@QEAAX_J0PEAVr_string@types@intercept@@PEAVPCounter@@@Z;
     scopeCompleted ENDP
+
+	;##########
+    PUBLIC frameEnd
+    frameEnd PROC
+        jmp ?frameEnd@ArmaProf@@QEAAXMMH@Z
+    frameEnd ENDP
+
 
 
 _TEXT    ENDS
