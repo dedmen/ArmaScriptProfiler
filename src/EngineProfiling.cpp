@@ -21,6 +21,7 @@ thread_local std::unique_ptr<std::unordered_map<std::pair<PCounter*, int>, std::
 thread_local bool openScopesInit;
 std::unordered_map<PCounter*, std::shared_ptr<ScopeInfo>> scopeCache;
 std::shared_mutex scopeCacheMtx;
+std::optional<std::thread::id> mainThread;
 
 extern "C" {
     uintptr_t profEndJmpback;
@@ -37,7 +38,7 @@ extern "C" {
 bool PCounter::shouldTime() {
     if (slot < 0) return false;
 
-
+    if (mainThread && *mainThread != std::this_thread::get_id()) return false;
     //exclude security cat, evwfGet evGet and so on as they spam too much and aren't useful
     if (cat && cat[0] == 's' && cat[1] == 'e' && cat[2] == 'c' && cat[3] == 'u') return false;
     //Man update error. calltime is about constant and uninteresting
@@ -176,4 +177,8 @@ EngineProfiling::EngineProfiling() {
         {
             return {};
         }, game_data_type::NOTHING, game_data_type::ARRAY);
+}
+
+void EngineProfiling::setMainThreadOnly() {
+    mainThread = std::this_thread::get_id();
 }

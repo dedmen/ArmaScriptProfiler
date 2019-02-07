@@ -666,9 +666,6 @@ game_value compileRedirectFinal(game_state& state, game_value_parameter message)
     return comp;
 }
 
-
-
-
 game_value callExtensionRedirect(game_state&, game_value_parameter ext, game_value_parameter msg) {
 	if (!profiler.callExtScope) {
 		static r_string compileEventText("callExtension");
@@ -1082,6 +1079,10 @@ void scriptProfiler::preStart() {
 			intercept::sqf::diag_log("ERROR ArmaScriptProfiler: Cannot enable engine profiling without Profiling build of Arma");
 		} else {
 			engineProf = std::make_shared<EngineProfiling>();
+
+            if (getCommandLineParam("-profilerEngineMTO"sv))
+                engineProf->setMainThreadOnly();
+
 			engineFrameEnd = true;
 		}
     }

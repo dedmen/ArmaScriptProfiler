@@ -108,6 +108,7 @@ class EngineProfiling {
 public:
 	EngineProfiling();
 	~EngineProfiling() = default;
+    void setMainThreadOnly();
 
     ArmaProf* armaP;
 	HookManager hooks;
