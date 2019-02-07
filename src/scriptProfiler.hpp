@@ -18,6 +18,7 @@ public:
 
     std::shared_ptr<ScopeInfo> compileScope;
     std::shared_ptr<ScopeInfo> callExtScope;
+    std::shared_ptr<ScopeInfo> preprocFileScope;
     intercept::types::r_string waitForAdapter;
     std::shared_ptr<EngineProfiling> engineProf;
     bool engineFrameEnd = false;

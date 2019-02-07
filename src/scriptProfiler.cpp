@@ -5,6 +5,7 @@
 #ifndef __linux__
 #include <Windows.h>
 #else
+#include <signal.h>
 #include <fstream>
 #endif
 #include "ProfilerAdapter.hpp"
@@ -16,12 +17,19 @@
 #include <memory>
 #include <string>
 
+
 using namespace intercept;
 using namespace std::chrono_literals;
 static sqf_script_type GameDataProfileScope_type;
 std::shared_ptr<ProfilerAdapter> GProfilerAdapter; //Needs to be above!! profiler
 scriptProfiler profiler{};
 bool instructionLevelProfiling = false;
+
+void diag_log(r_string msg) {
+	GProfilerAdapter->addLog(msg);
+	sqf::diag_log(msg);
+}
+
 
 class GameDataProfileScope : public game_data {
 
@@ -78,15 +86,15 @@ game_data* createGameDataProfileScope(param_archive* ar) {
 class GameInstructionProfileScopeStart : public game_instruction {
 public:
     r_string name;
-   std::shared_ptr<ScopeInfo> scopeInfo;
+	std::shared_ptr<ScopeInfo> scopeInfo;
 
     void lastRefDeleted() const override {
         rv_allocator<GameInstructionProfileScopeStart>::destroy_deallocate(const_cast<GameInstructionProfileScopeStart *>(this), 1);
     }
 
     bool exec(game_state& state, vm_context& ctx) override {
-        static r_string lastScopeStart;
-	    if ((!GProfilerAdapter->IsScheduledSupported() &&/*ctx.scheduled || */sqf::can_suspend()) || (lastScopeStart.length() && lastScopeStart == name)) return false;
+	    if (!GProfilerAdapter->IsScheduledSupported() &&/*ctx.scheduled || */sqf::can_suspend()) return false;
+
        
         auto ev = state.get_evaluator();
 
@@ -100,6 +108,7 @@ public:
             game_value(),
 #endif
 			scopeInfo);
+
         //data->createPos = ctx.get_current_position();
 #ifdef WITH_CHROME
 		if (GProfilerAdapter->IsScheduledSupported() && sqf::can_suspend()) {
@@ -107,24 +116,28 @@ public:
 				chromeStorage->threadID = reinterpret_cast<uint64_t>(&ctx);
 		}
 #endif
-        //if (name == "CBA_fnc_preInit") {
-        //    sqf::diag_log("preinitNow");
+		if (name == "CBA_fnc_compileFunction")
+			GProfilerAdapter->setDescription(data->scopeTempStorage, state.get_local_variable("_this")[1]);
+
+
+        //if (name == "CBA_fnc_compileFunction") {
+        //    diag_log("preinitNow"sv);
         //
         //
         //    if (!ev->local->variables.is_null(ev->local->variables.get("1scp"sv)))
-        //        sqf::diag_log("scopeAlreadyExists");
+        //        diag_log("scopeAlreadyExists"sv);
         //
-        //    sqf::diag_log("curP " + ctx.get_current_position().sourcefile + ":" + std::to_string(ctx.get_current_position().sourceline));
+        //    diag_log("curP " + ctx.get_current_position().sourcefile + ":" + std::to_string(ctx.get_current_position().sourceline));
         //
         //    auto vsp = ev->local;
         //    r_string spacing(""sv);
         //    while (vsp) {
         //        for (auto& it : vsp->variables) {
-        //            sqf::diag_log(spacing+it.get_map_key());
+        //            diag_log(spacing+it.get_map_key());
         //            if (it.get_map_key() == "1scp") {
         //                auto gd1 = it.value.get_as<GameDataProfileScope>();
-        //                sqf::diag_log(spacing + "-" + gd1->data->name);
-        //                sqf::diag_log(spacing + "+" + gd1->data->createPos.sourcefile+":"+std::to_string(gd1->data->createPos.sourceline));
+        //                diag_log(spacing + "-" + gd1->data->name);
+        //                //diag_log(spacing + "+" + gd1->data->createPos.sourcefile+":"+std::to_string(gd1->data->createPos.sourceline));
         //            }
         //
         //
@@ -137,15 +150,12 @@ public:
           
 		state.set_local_variable("1scp"sv, game_value(new GameDataProfileScope(std::move(data))), false);
 
-        //if (name == "CBA_fnc_preInit") {
-        //    sqf::diag_log("preinitPush");
+        //if (name == "CBA_fnc_compileFunction") {
+        //    diag_log("preinitPush"sv);
         //    for (auto& it : ev->local->variables) {
-        //        sqf::diag_log(it.get_map_key());
+        //        diag_log(it.get_map_key());
         //    }
         //}
-        
-
-        lastScopeStart = name;
 
         return false;
     }
@@ -202,7 +212,7 @@ game_value profilerCaptureTrigger(game_state&) {
 }
 
 game_value profilerTrigger(game_state&) {
- auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
+	auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
 	if (!armaDiagProf) return {};
 	armaDiagProf->profilerTrigger();
     return {};
@@ -285,8 +295,9 @@ game_value profileScript(game_state& state, game_value_parameter par) {
 }
 
 
-std::regex getScriptName_acefncRegex(R"(\\?[xz]\\([^\\]*)\\addons\\([^\\]*)\\(?:functions\\)?fnc?_([^.]*)\.sqf)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
-std::regex getScriptName_LinePreprocRegex(R"(#line [0-9]* "([^"]*))", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
+std::regex getScriptName_acefncRegex(R"(\\?[xz]\\([^\\]*)\\addons\\([^\\]*)\\(?:[^\\]*\\)*fnc?_([^.]*)\.sqf)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
+std::regex getScriptName_aceMiscRegex(R"(\\?[xz]\\([^\\]*)\\addons\\([^\\]*)\\(?:[^\\]*\\)*([^.]*)\.sqf)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
+std::regex getScriptName_LinePreprocRegex(R"(#line [0-9]* (?:"|')([^"']*))", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
 std::regex getScriptName_bisfncRegex(R"(\\?A3\\(?:[^.]*\\)+fn_([^.]*).sqf)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
 std::regex getScriptName_pathScriptNameRegex(R"(\[([^\]]*)\]$)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
 std::regex getScriptName_scriptNameCmdRegex(R"(scriptName (?:"|')([^"']*))", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
@@ -316,11 +327,15 @@ std::string getScriptName(const r_string& str, const r_string& filePath, uint32_
     std::match_results<compact_array<char>::const_iterator> scriptNameMatch;
     //scriptName "cba_events_fnc_playerEH_EachFrame";
     if (std::regex_search(str.begin(), str.end(), scriptNameMatch, getScriptName_scriptNameCmdRegex)) {
-        return std::string(scriptNameMatch[1]); //cba_events_fnc_playerEH_EachFrame
+		auto mt = scriptNameMatch[1].str();
+		if (mt != "%1") //Skip "%1" from initFunctions
+			return mt; //cba_events_fnc_playerEH_EachFrame
     }
     //private _fnc_scriptName = 'CBA_fnc_currentUnit';
     if (std::regex_search(str.begin(), str.end(), scriptNameMatch, getScriptName_scriptNameVarRegex)) {
-        return std::string(scriptNameMatch[1]); //CBA_fnc_currentUnit
+		auto mt = scriptNameMatch[1].str();
+		if (mt != "%1") //Skip "%1" from initFunctions
+			return mt; //CBA_fnc_currentUnit
     }
 
     std::match_results<compact_array<char>::const_iterator> filePathFindMatch;
@@ -336,6 +351,10 @@ std::string getScriptName(const r_string& str, const r_string& filePath, uint32_
         //\x\cba\addons\common\fnc_currentUnit.sqf
         if (!filePathFromLine.empty() && std::regex_search(filePathFromLine, pathMatchFromline, getScriptName_acefncRegex)) {
             return std::string(pathMatchFromline[1]) + "_" + std::string(pathMatchFromline[2]) + "_fnc_" + std::string(pathMatchFromline[3]); //CBA_common_fnc_currentUnit
+        }
+		//\x\cba\addons\common\XEH_preStart.sqf
+        if (!filePathFromLine.empty() && std::regex_search(filePathFromLine, pathMatchFromline, getScriptName_aceMiscRegex)) {
+            return std::string(pathMatchFromline[1]) + "_" + std::string(pathMatchFromline[2]) + "_" + std::string(pathMatchFromline[3]); //CBA_common_XEH_preStart
         }
         //A3\functions_f\Animation\Math\fn_deltaTime.sqf
         if (!filePathFromLine.empty() && std::regex_search(filePathFromLine, pathMatchFromline, getScriptName_bisfncRegex)) {
@@ -1037,8 +1056,9 @@ public:
 #pragma endregion Instructions
 #endif
 void scriptProfiler::preStart() {
-
+	sqf::diag_log("preStart SP");
     if (getCommandLineParam("-profilerEnableInstruction"sv)) {
+		sqf::diag_log("ASP: Instruction Level profiling enabled"sv);
         instructionLevelProfiling = true;
     }
 
@@ -1051,6 +1071,7 @@ void scriptProfiler::preStart() {
         else if (*startAdapter == "Chrome"sv) {
             auto chromeAdapter = std::make_shared<AdapterChrome>();
             GProfilerAdapter = chromeAdapter;
+			sqf::diag_log("ASP: Selected Chrome Adapter"sv);
 
             auto chromeOutput = getCommandLineParam("-profilerOutput"sv);
             if (chromeOutput)
@@ -1060,28 +1081,36 @@ void scriptProfiler::preStart() {
         }
         else if (*startAdapter == "Brofiler"sv) {
             GProfilerAdapter = std::make_shared<AdapterBrofiler>();
+			sqf::diag_log("ASP: Selected Brofiler Adapter"sv);
 #endif
         }
         else if (*startAdapter == "Arma"sv) {
             GProfilerAdapter = std::make_shared<AdapterArmaDiag>();
+			sqf::diag_log("ASP: Selected ArmaDiag Adapter"sv);
         }
         else if (*startAdapter == "Tracy"sv) {
             GProfilerAdapter = std::make_shared<AdapterTracy>();
+			sqf::diag_log("ASP: Selected Tracy Adapter"sv);
         }
     }
     else {
         GProfilerAdapter = std::make_shared<AdapterTracy>();
+		sqf::diag_log("ASP: Selected Tracy Adapter"sv);
     }
 
 
-    if (getCommandLineParam("-profilerEnableEngine"sv)) {
+	if (getCommandLineParam("-profilerEnableEngine"sv)) {
+		diag_log("ASP: Enable Engine Profiling"sv);
 		if (intercept::sqf::product_version().branch != "Profile") {
-			intercept::sqf::diag_log("ERROR ArmaScriptProfiler: Cannot enable engine profiling without Profiling build of Arma");
+			intercept::sqf::diag_log("ERROR ArmaScriptProfiler: Cannot enable engine profiling without Profiling build of Arma"sv);
 		} else {
 			engineProf = std::make_shared<EngineProfiling>();
 
-            if (getCommandLineParam("-profilerEngineMTO"sv))
-                engineProf->setMainThreadOnly();
+            if (getCommandLineParam("-profilerEngineMTO"sv)) {
+	            engineProf->setMainThreadOnly();
+				diag_log("ASP: Engine profiler main thread only mode"sv);
+            }
+                
 
 			engineFrameEnd = true;
 		}
@@ -1108,6 +1137,40 @@ void scriptProfiler::preStart() {
 	static auto _profilerCallExt = client::host::register_sqf_command("callExtension", "Profiler redirect", callExtensionRedirect, game_data_type::STRING, game_data_type::STRING, game_data_type::STRING);
 	static auto _profilerDiagLog = client::host::register_sqf_command("diag_log", "Profiler redirect", diag_logRedirect, game_data_type::NOTHING, game_data_type::ANY);
 	static auto _profilerProfScript = client::host::register_sqf_command("profileScript", "Profiler redirect", profileScript, game_data_type::ARRAY, game_data_type::ARRAY);
+	static auto _profilerPrepFile = client::host::register_sqf_command("preprocessFile", "Profiler redirect", [](game_state&, game_value_parameter arg) -> game_value {
+		if (!profiler.preprocFileScope) {
+			static r_string compileEventText("preprocessFile");
+			static r_string profName("scriptProfiler.cpp");
+			profiler.preprocFileScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
+		}
+
+		auto tempData = GProfilerAdapter->enterScope(profiler.preprocFileScope);
+
+		GProfilerAdapter->setName(tempData, "preprocessFile "+static_cast<r_string>(arg));
+
+		auto res = sqf::preprocess_file_line_numbers(arg);
+
+		GProfilerAdapter->leaveScope(tempData);
+
+		return res;
+	}, game_data_type::STRING, game_data_type::STRING);
+	static auto _profilerPrepFileLN = client::host::register_sqf_command("preprocessFileLineNumbers", "Profiler redirect", [](game_state&, game_value_parameter arg) -> game_value {
+		if (!profiler.preprocFileScope) {
+			static r_string compileEventText("preprocessFileLineNumbers");
+			static r_string profName("scriptProfiler.cpp");
+			profiler.preprocFileScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
+		}
+
+		auto tempData = GProfilerAdapter->enterScope(profiler.preprocFileScope);
+
+		GProfilerAdapter->setName(tempData, "preprocessFile "+static_cast<r_string>(arg));
+
+		auto res = sqf::preprocess_file_line_numbers(arg);
+
+		GProfilerAdapter->leaveScope(tempData);
+
+		return res;
+	}, game_data_type::STRING, game_data_type::STRING);
 
 #ifndef __linux__
 	auto iface = client::host::request_plugin_interface("sqf_asm_devIf", 1);
@@ -1178,6 +1241,10 @@ void scriptProfiler::perFrame() {
 		GProfilerAdapter->perFrame();
 
 	if (!waitForAdapter.empty()) {
+		compileScope.reset();
+		callExtScope.reset();
+		preprocFileScope.reset();
+
 		if (false) {
 #ifdef WITH_CHROME	
 		} else if (waitForAdapter == "Chrome") {
