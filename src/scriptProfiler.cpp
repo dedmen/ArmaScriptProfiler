@@ -721,9 +721,9 @@ std::string get_command_line() {
     std::ifstream cmdline("/proc/self/cmdline");
     std::string file_contents;
     std::string line;
-    while (std::getline(cmdline, line)) {
+    while (std::getline(cmdline, line, '\0')) {
         file_contents += line;
-        file_contents.push_back('\n'); //#TODO can linux even have more than one line?
+        file_contents.push_back(' '); //#TODO can linux even have more than one line?
     }
     return file_contents;
 #else
