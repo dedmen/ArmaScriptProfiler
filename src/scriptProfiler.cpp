@@ -363,7 +363,7 @@ std::string getScriptName(const r_string& str, const r_string& filePath, uint32_
     }
 
 
-    if (str.find("createProfileScope", 0) != -1) return "<unknown>"; //Don't remember why I did this :D
+    //if (str.find("createProfileScope", 0) != -1) return "<unknown>"; //Don't remember why I did this :D
 
     if (returnFirstLineIfNoName) {
         auto linebreak = str.find("\n", 0);
@@ -542,20 +542,22 @@ public:
 
 
 
-void addScopeInstruction(game_data_code* bodyCode, const std::string& scriptName) {
+void addScopeInstruction(ref<compact_array<ref<game_instruction>>>& bodyCode, const std::string& scriptName) {
 #ifndef __linux__
 #ifndef _WIN64
 #error "no x64 hash codes yet"
 #endif
 #endif
-    auto lt = typeid(bodyCode->instructions->data()[0]).hash_code();
+    if (!bodyCode) return;
+
+    auto lt = typeid(bodyCode->data()[0]).hash_code();
     auto rt = typeid(GameInstructionProfileScopeStart).hash_code();
 
     if (lt == rt) return;
-    if (bodyCode->instructions->size() < 4) return;
+    if (bodyCode->size() < 4) return;
 
 
-    auto& funcPath = bodyCode->instructions->front()->sdp.sourcefile;
+    auto& funcPath = bodyCode->front()->sdp.sourcefile;
     //r_string src = getScriptFromFirstLine(bodyCode->instructions->front()->sdp, false);
 
 
@@ -563,7 +565,7 @@ void addScopeInstruction(game_data_code* bodyCode, const std::string& scriptName
     //Insert instruction to set _x
     ref<GameInstructionProfileScopeStart> curElInstruction = rv_allocator<GameInstructionProfileScopeStart>::create_single();
     curElInstruction->name = scriptName;
-    curElInstruction->sdp = bodyCode->instructions->front()->sdp;
+    curElInstruction->sdp = bodyCode->front()->sdp;
     curElInstruction->scopeInfo = GProfilerAdapter->createScope(curElInstruction->name,
         funcPath.empty() ? curElInstruction->name : funcPath,
         curElInstruction->sdp.sourceline);
@@ -571,12 +573,12 @@ void addScopeInstruction(game_data_code* bodyCode, const std::string& scriptName
     //curElInstruction->eventDescription->source = src;
 
 
-    auto oldInstructions = bodyCode->instructions;
+    auto oldInstructions = bodyCode;
     ref<compact_array<ref<game_instruction>>> newInstr = compact_array<ref<game_instruction>>::create(*oldInstructions, oldInstructions->size() + 1);
 
     std::copy(oldInstructions->begin(), oldInstructions->begin() + oldInstructions->size(), newInstr->begin() + 1);
     newInstr->data()[0] = curElInstruction;
-    bodyCode->instructions = newInstr;
+    bodyCode = newInstr;
 
 
 #ifdef __linux__
@@ -584,7 +586,7 @@ void addScopeInstruction(game_data_code* bodyCode, const std::string& scriptName
 #else
 	static const size_t ConstTypeIDHash = 0x0a56f03038a03360ull;
 #endif
-    for (auto& it : *bodyCode->instructions) {
+    for (auto& it : *bodyCode) {
 
         auto instC = dynamic_cast<GameInstructionProfileScopeStart*>(it.get());
         if (instC) {
@@ -605,7 +607,7 @@ void addScopeInstruction(game_data_code* bodyCode, const std::string& scriptName
 
         auto bodyCodeNext = static_cast<game_data_code*>(inst->value.data.get());
         if (bodyCodeNext->instructions && bodyCodeNext->instructions->size() > 20)
-           addScopeInstruction(bodyCodeNext, scriptName);
+           addScopeInstruction(bodyCodeNext->instructions, scriptName);
     }
 }
 
@@ -642,8 +644,8 @@ game_value compileRedirect2(game_state& state, game_value_parameter message) {
     std::string scriptName = getScriptName(str, funcPath, 32);
     //if (scriptName.empty()) scriptName = "<unknown>";
 
-    if (bodyCode->instructions && !scriptName.empty() && scriptName != "<unknown>")
-        addScopeInstruction(bodyCode, scriptName);
+    if (bodyCode->instructions && !scriptName.empty())// && scriptName != "<unknown>"
+        addScopeInstruction(bodyCode->instructions, scriptName);
 
     return comp;
 }
@@ -679,8 +681,8 @@ game_value compileRedirectFinal(game_state& state, game_value_parameter message)
     std::string scriptName = getScriptName(str, funcPath, 32);
     //if (scriptName.empty()) scriptName = "<unknown>";
 
-    if (bodyCode->instructions && !scriptName.empty() && scriptName != "<unknown>")
-        addScopeInstruction(bodyCode, scriptName);
+    if (bodyCode->instructions && !scriptName.empty())// && scriptName != "<unknown>"
+        addScopeInstruction(bodyCode->instructions, scriptName);
 
     return comp;
 }
@@ -1110,7 +1112,16 @@ void scriptProfiler::preStart() {
 	            engineProf->setMainThreadOnly();
 				diag_log("ASP: Engine profiler main thread only mode"sv);
             }
-                
+
+            if (getCommandLineParam("-profilerEngineNoFile"sv)) {
+                engineProf->setNoFile();
+                diag_log("ASP: Engine profiler NoFile mode"sv);
+            }
+
+            if (getCommandLineParam("-profilerEngineNoMem"sv)) {
+                engineProf->setNoMem();
+                diag_log("ASP: Engine profiler NoMem mode"sv);
+            }
 
 			engineFrameEnd = true;
 		}

@@ -12,6 +12,7 @@ enum class hookTypes {
     doEnd,
     scopeCompleted,
     frameEnd,
+    compileCacheIns,
     End
 };
 

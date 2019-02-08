@@ -8,9 +8,11 @@ _TEXT    SEGMENT
     EXTERN ?doEnd@ScopeProf@@QEAAXXZ:					PROC;   ScopeProf::doEnd
     EXTERN ?scopeCompleted@ArmaProf@@QEAAX_J0PEAVr_string@types@intercept@@PEAVPCounter@@@Z:					PROC;   ArmaProf::scopeCompleted
     EXTERN ?frameEnd@ArmaProf@@QEAAXMMH@Z:				PROC;   ArmaProf::frameEnd
+    EXTERN insertCompileCache:							PROC;
 	
     ;JmpBacks
     EXTERN profEndJmpback:								qword
+    EXTERN compileCacheInsJmpback:						qword
 
     ;##########
     PUBLIC shouldTime
@@ -64,6 +66,58 @@ _TEXT    SEGMENT
     frameEnd PROC
         jmp ?frameEnd@ArmaProf@@QEAAXMMH@Z
     frameEnd ENDP
+
+
+	;##########
+    PUBLIC compileCacheIns
+    compileCacheIns PROC
+
+
+		;//rbp-60h compiled
+		;//rbx source
+		;These happen to be free so why not use them right away? :D
+		mov rcx, rbp ;code
+		sub rcx, 60h
+		mov rdx, rbx ;pos
+
+
+		push rax;
+		push rbx;
+		;push rcx;
+		;push rdx;
+		push r8;
+		push r9;
+		push r10;
+		push r11;
+		push r11; Don't ask me. Just do
+		push r11;
+
+
+
+		call insertCompileCache;
+
+		pop r11;
+		pop r11;
+		pop r11;
+		pop r10;
+		pop r9;
+		pop r8;
+		;pop rdx;
+		;pop rcx;
+		pop rbx;
+		pop rax;
+
+	; fixup
+
+		mov     [rbp-50h], rax
+		mov     eax, [rbx+10h]
+		mov     [rbp-48h], eax
+		mov     rax, [rbx+18h]
+
+        jmp compileCacheInsJmpback
+    compileCacheIns ENDP
+
+
 
 
 

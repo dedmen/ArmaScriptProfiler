@@ -109,6 +109,8 @@ public:
 	EngineProfiling();
 	~EngineProfiling() = default;
     void setMainThreadOnly();
+    void setNoFile();
+    void setNoMem();
 
     ArmaProf* armaP;
 	HookManager hooks;

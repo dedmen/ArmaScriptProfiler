@@ -3,6 +3,7 @@
 #include "AdapterTracy.hpp"
 #include <client.hpp>
 #include <shared_mutex>
+#include "scriptProfiler.hpp"
 
 extern std::shared_ptr<ProfilerAdapter> GProfilerAdapter;
 
@@ -22,17 +23,41 @@ thread_local bool openScopesInit;
 std::unordered_map<PCounter*, std::shared_ptr<ScopeInfo>> scopeCache;
 std::shared_mutex scopeCacheMtx;
 std::optional<std::thread::id> mainThread;
+bool noFile = false;
+bool noMem = false;
+
+std::string getScriptName(const r_string& str, const r_string& filePath, uint32_t returnFirstLineIfNoName = 0);
+void addScopeInstruction(ref<compact_array<ref<game_instruction>>>& bodyCode, const std::string& scriptName);
+
 
 extern "C" {
     uintptr_t profEndJmpback;
     uintptr_t shouldTimeJmpback;
     uintptr_t frameEndJmpback;
+    uintptr_t compileCacheInsJmpback;
 
 
     void shouldTime();
     void doEnd();
     void scopeCompleted();
     void frameEnd();
+    void compileCacheIns();
+
+    __declspec(noinline) void insertCompileCache(uintptr_t code, sourcedocpos& sdp) {
+        
+        auto x = reinterpret_cast<ref<compact_array<ref<game_instruction>>>*>(code);
+
+        if (sdp.content.length() < 64 || !x || !*x || x->get()->size() < 16) return;
+
+        auto name = getScriptName(sdp.content, sdp.sourcefile, 32);
+        if (name != "<unknown>" && !name.empty())
+            addScopeInstruction(*x, name);
+
+
+
+    }
+
+
 }
 
 bool PCounter::shouldTime() {
@@ -41,6 +66,12 @@ bool PCounter::shouldTime() {
     if (mainThread && *mainThread != std::this_thread::get_id()) return false;
     //exclude security cat, evwfGet evGet and so on as they spam too much and aren't useful
     if (cat && cat[0] == 's' && cat[1] == 'e' && cat[2] == 'c' && cat[3] == 'u') return false;
+    if (noFile && cat && cat[0] == 'f' && cat[1] == 'i' && cat[2] == 'l' && cat[3] == 'e') return false;
+    if (noMem&& cat&& cat[0] == 'm' && cat[1] == 'e' && cat[2] == 'm') return false;
+    if (cat && cat[0] == 'd' && cat[1] == 'r' && cat[2] == 'w') return false; //drw
+    if (cat && cat[0] == 'd' && cat[1] == 'd' && cat[2] == '1') return false; //dd11
+    if (cat && cat[0] == 't' && cat[1] == 'e' && cat[2] == 'x' && cat[3] == 0) return false; //tex
+    if (name && name[0] == 'I' && name[1] == 'G' && name[2] == 'S' && name[3] == 'M') return false; //IGSMM no idea what that is, but generates a lot of calls
     //Man update error. calltime is about constant and uninteresting
     if (name && name[0] == 'm' && name[1] == 'a' && name[2] == 'n' && name[3] == 'C') return false;
 
@@ -126,6 +157,12 @@ HookManager::Pattern pat_shouldTime{
 
 #else
 
+HookManager::Pattern pat_compileCacheIns{ //1.88.145.302 profv1 013D40B3
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx?xxx????xxxx????xxxxx????xxxxxxxxxxxxxxxxxxxxxxxxx????xxx?????xxxx?x????xxxxxxxxxxxxxxxxxxxxx????xxxxxxxxxxxxxxxxx"sv,
+    "\x48\x89\x45\xB0\x8B\x43\x10\x89\x45\xB8\x48\x8B\x43\x18\x48\x85\xC0\x74\x03\xF0\xFF\x00\x48\x89\x45\xC0\x8B\x43\x20\x48\x8D\x54\x24\x00\x48\x8D\x0D\x00\x00\x00\x00\x89\x45\xC8\xE8\x00\x00\x00\x00\x48\x8D\x4D\xA8\xE8\x00\x00\x00\x00\x48\x8B\x4D\xA0\x48\x85\xC9\x74\x1C\x41\x8B\xC7\xF0\x0F\xC1\x01\xFF\xC8\x75\x09\x48\x8B\x4D\xA0\xE8\x00\x00\x00\x00\x48\xC7\x45\x00\x00\x00\x00\x00\x48\x8D\x4C\x24\x00\xE8\x00\x00\x00\x00\x4D\x85\xE4\x74\x1D\x41\x8B\xC7\xF0\x41\x0F\xC1\x04\x24\xFF\xC8\x75\x10\x48\x8B\x0D\x00\x00\x00\x00\x49\x8B\xD4\x48\x8B\x01\xFF\x50\x18\x4D\x85\xF6\x74\x1C\x41\x8B\xC7"sv
+};
+
+
 HookManager::Pattern pat_frameEnd{
     "xxxxxxxxxxxxxxxxx????xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx?xxxxx?????x????xxxxxxxxx????xx????xxxx?xxxxxxxx????xx????xx?????x????xxx????xx????xx????xxxxxxxx????xxx????xxxxx????xxxxxxxxxxxxxxxxxxxxxxx"sv,
     "\x48\x8B\xC4\x57\x41\x56\x48\x83\xEC\x78\x48\x89\x58\x10\x0F\xB6\x99\x00\x00\x00\x00\x48\x89\x68\xE8\x48\x89\x70\xE0\x4C\x89\x60\xD8\x44\x8B\x61\x6C\x44\x3B\x61\x68\x4C\x89\x68\xD0\x48\x8B\xF9\x0F\x29\x78\xA8\x0F\x28\xFA\x44\x0F\x4F\x61\x00\x45\x8B\xE9\xC6\x81\x00\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x45\x33\xF6\x4C\x39\x77\x60\x0F\x84\x00\x00\x00\x00\x8B\x87\x00\x00\x00\x00\x4C\x89\x7C\x24\x00\x85\xC0\x7E\x1A\xFF\xC8\x89\x87\x00\x00\x00\x00\x0F\x85\x00\x00\x00\x00\xC6\x87\x00\x00\x00\x00\x00\xE9\x00\x00\x00\x00\x44\x38\xB7\x00\x00\x00\x00\x0F\x84\x00\x00\x00\x00\x8B\x87\x00\x00\x00\x00\x85\xC0\x7E\x08\xFF\xC8\x89\x87\x00\x00\x00\x00\x44\x39\xB7\x00\x00\x00\x00\x7F\x75\x48\x8B\x87\x00\x00\x00\x00\x48\x85\xC0\x74\x69\x44\x38\x70\x10\x74\x63\x48\x8D\x50\x10\x48\x85\xC0\x75\x07\x48\x8D\x15"sv
@@ -154,6 +191,7 @@ EngineProfiling::EngineProfiling() {
     hooks.placeHook(hookTypes::scopeCompleted, pat_scopeCompleted, reinterpret_cast<uintptr_t>(scopeCompleted), profEndJmpback, 0);
     hooks.placeHook(hookTypes::shouldTime, pat_shouldTime, reinterpret_cast<uintptr_t>(shouldTime), shouldTimeJmpback, 0);
     hooks.placeHook(hookTypes::frameEnd, pat_frameEnd, reinterpret_cast<uintptr_t>(frameEnd), frameEndJmpback, 0);
+    hooks.placeHook(hookTypes::compileCacheIns, pat_compileCacheIns, reinterpret_cast<uintptr_t>(compileCacheIns), compileCacheInsJmpback, 0);
 #ifdef __linux__
     auto found = hooks.findPattern(pat_doEnd, 0);
 
@@ -171,7 +209,6 @@ EngineProfiling::EngineProfiling() {
     armaP->blip.clear();
     armaP->forceCapture = true;
     armaP->capture = true;
-
     //disable captureSlowFrame because it can set forceCapture to false
     static auto stuff = intercept::client::host::register_sqf_command("diag_captureSlowFrame"sv, ""sv, [](game_state&, game_value_parameter) -> game_value
         {
@@ -181,4 +218,12 @@ EngineProfiling::EngineProfiling() {
 
 void EngineProfiling::setMainThreadOnly() {
     mainThread = std::this_thread::get_id();
+}
+
+void EngineProfiling::setNoFile() {
+    noFile = true;
+}
+
+void EngineProfiling::setNoMem() {
+    noMem = true;
 }
