@@ -43,7 +43,7 @@ extern "C" {
     void frameEnd();
     void compileCacheIns();
 
-    __declspec(noinline) void insertCompileCache(uintptr_t code, sourcedocpos& sdp) {
+    void insertCompileCache(uintptr_t code, sourcedocpos& sdp) {
         
         auto x = reinterpret_cast<ref<compact_array<ref<game_instruction>>>*>(code);
 
@@ -63,6 +63,10 @@ extern "C" {
 bool PCounter::shouldTime() {
     if (slot < 0) return false;
 
+    if (GProfilerAdapter->getType() != AdapterType::Tracy) return false;
+    auto tracyProf = std::dynamic_pointer_cast<AdapterTracy>(GProfilerAdapter);
+    if (!tracyProf->isConnected()) return false;
+
     if (mainThread && *mainThread != std::this_thread::get_id()) return false;
     //exclude security cat, evwfGet evGet and so on as they spam too much and aren't useful
     if (cat && cat[0] == 's' && cat[1] == 'e' && cat[2] == 'c' && cat[3] == 'u') return false;
@@ -72,13 +76,8 @@ bool PCounter::shouldTime() {
     if (cat && cat[0] == 'd' && cat[1] == 'd' && cat[2] == '1') return false; //dd11
     if (cat && cat[0] == 't' && cat[1] == 'e' && cat[2] == 'x' && cat[3] == 0) return false; //tex
     if (name && name[0] == 'I' && name[1] == 'G' && name[2] == 'S' && name[3] == 'M') return false; //IGSMM no idea what that is, but generates a lot of calls
-    //Man update error. calltime is about constant and uninteresting
-    if (name && name[0] == 'm' && name[1] == 'a' && name[2] == 'n' && name[3] == 'C') return false;
-
-    if (GProfilerAdapter->getType() != AdapterType::Tracy) return false;
+    if (name && name[0] == 'm' && name[1] == 'a' && name[2] == 'n' && name[3] == 'C') return false; //Man update error. calltime is about constant and uninteresting
     
-    auto tracyProf = std::dynamic_pointer_cast<AdapterTracy>(GProfilerAdapter);
-    if (!tracyProf->isConnected()) return false;
 
 
     std::shared_lock lock(scopeCacheMtx);
@@ -191,7 +190,9 @@ EngineProfiling::EngineProfiling() {
     hooks.placeHook(hookTypes::scopeCompleted, pat_scopeCompleted, reinterpret_cast<uintptr_t>(scopeCompleted), profEndJmpback, 0);
     hooks.placeHook(hookTypes::shouldTime, pat_shouldTime, reinterpret_cast<uintptr_t>(shouldTime), shouldTimeJmpback, 0);
     hooks.placeHook(hookTypes::frameEnd, pat_frameEnd, reinterpret_cast<uintptr_t>(frameEnd), frameEndJmpback, 0);
+#ifndef __linux__
     hooks.placeHook(hookTypes::compileCacheIns, pat_compileCacheIns, reinterpret_cast<uintptr_t>(compileCacheIns), compileCacheInsJmpback, 0);
+#endif
 #ifdef __linux__
     auto found = hooks.findPattern(pat_doEnd, 0);
 

@@ -1058,7 +1058,7 @@ public:
 #pragma endregion Instructions
 #endif
 void scriptProfiler::preStart() {
-	sqf::diag_log("preStart SP");
+	sqf::diag_log("Arma Script Profiler preStart");
     if (getCommandLineParam("-profilerEnableInstruction"sv)) {
 		sqf::diag_log("ASP: Instruction Level profiling enabled"sv);
         instructionLevelProfiling = true;
