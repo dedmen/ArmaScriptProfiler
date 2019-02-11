@@ -11,7 +11,7 @@ using namespace std::chrono_literals;
 
 class ScopeInfoTracy final: public ScopeInfo {
 public:
-	tracy::SourceLocationData info;
+    tracy::SourceLocationData info;
 };
 
 class ScopeTempStorageTracy final : public ScopeTempStorage {
@@ -43,7 +43,7 @@ std::shared_ptr<ScopeInfo> AdapterTracy::createScope(intercept::types::r_string 
         auto info = std::make_shared<ScopeInfoTracy>();
         info->info = tracy::SourceLocationData{nullptr, std::get<0>(tuple).c_str(), std::get<1>(tuple).c_str(), std::get<2>(tuple), 0};
 
-		scopeCache.insert({tuple, info});
+        scopeCache.insert({tuple, info});
         return info;
     }
     return found->second; 

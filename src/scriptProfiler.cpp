@@ -26,8 +26,8 @@ scriptProfiler profiler{};
 bool instructionLevelProfiling = false;
 
 void diag_log(r_string msg) {
-	GProfilerAdapter->addLog(msg);
-	sqf::diag_log(msg);
+    GProfilerAdapter->addLog(msg);
+    sqf::diag_log(msg);
 }
 
 
@@ -37,18 +37,18 @@ public:
     class scopeData {
     public:
         scopeData(r_string _name, game_value thisArgs, std::shared_ptr<ScopeInfo> scopeInfo) : name(std::move(_name)) {
-			if (!scopeInfo) return;
+            if (!scopeInfo) return;
 
-			scopeTempStorage = GProfilerAdapter->enterScope(scopeInfo);
+            scopeTempStorage = GProfilerAdapter->enterScope(scopeInfo);
 #ifdef WITH_BROFILER
-			GProfilerAdapter->setThisArgs(scopeTempStorage, std::move(thisArgs));
+            GProfilerAdapter->setThisArgs(scopeTempStorage, std::move(thisArgs));
 #endif
         }
         ~scopeData() {
-			GProfilerAdapter->leaveScope(scopeTempStorage);
+            GProfilerAdapter->leaveScope(scopeTempStorage);
         }
-		std::shared_ptr<ScopeTempStorage> scopeTempStorage;
-		r_string name;
+        std::shared_ptr<ScopeTempStorage> scopeTempStorage;
+        r_string name;
         //sourcedocpos createPos;
     };
 
@@ -86,14 +86,14 @@ game_data* createGameDataProfileScope(param_archive* ar) {
 class GameInstructionProfileScopeStart : public game_instruction {
 public:
     r_string name;
-	std::shared_ptr<ScopeInfo> scopeInfo;
+    std::shared_ptr<ScopeInfo> scopeInfo;
 
     void lastRefDeleted() const override {
         rv_allocator<GameInstructionProfileScopeStart>::destroy_deallocate(const_cast<GameInstructionProfileScopeStart *>(this), 1);
     }
 
     bool exec(game_state& state, vm_context& ctx) override {
-	    if (!GProfilerAdapter->IsScheduledSupported() &&/*ctx.scheduled || */sqf::can_suspend()) return false;
+        if (!GProfilerAdapter->IsScheduledSupported() &&/*ctx.scheduled || */sqf::can_suspend()) return false;
 
        
         auto ev = state.get_evaluator();
@@ -107,17 +107,17 @@ public:
 #else
             game_value(),
 #endif
-			scopeInfo);
+            scopeInfo);
 
         //data->createPos = ctx.get_current_position();
 #ifdef WITH_CHROME
-		if (GProfilerAdapter->IsScheduledSupported() && sqf::can_suspend()) {
-			if (auto chromeStorage = std::dynamic_pointer_cast<ScopeTempStorageChrome>(data->scopeTempStorage))
-				chromeStorage->threadID = reinterpret_cast<uint64_t>(&ctx);
-		}
+        if (GProfilerAdapter->IsScheduledSupported() && sqf::can_suspend()) {
+            if (auto chromeStorage = std::dynamic_pointer_cast<ScopeTempStorageChrome>(data->scopeTempStorage))
+                chromeStorage->threadID = reinterpret_cast<uint64_t>(&ctx);
+        }
 #endif
-		if (name == "CBA_fnc_compileFunction")
-			GProfilerAdapter->setDescription(data->scopeTempStorage, state.get_local_variable("_this")[1]);
+        if (name == "CBA_fnc_compileFunction")
+            GProfilerAdapter->setDescription(data->scopeTempStorage, state.get_local_variable("_this")[1]);
 
 
         //if (name == "CBA_fnc_compileFunction") {
@@ -148,7 +148,7 @@ public:
         //    }
         //}
           
-		state.set_local_variable("1scp"sv, game_value(new GameDataProfileScope(std::move(data))), false);
+        state.set_local_variable("1scp"sv, game_value(new GameDataProfileScope(std::move(data))), false);
 
         //if (name == "CBA_fnc_compileFunction") {
         //    diag_log("preinitPush"sv);
@@ -171,10 +171,10 @@ game_value createProfileScope(game_state&, game_value_parameter name) {
 
     auto data = std::make_shared<GameDataProfileScope::scopeData>(name,
     //sqf::str(state.eval->local->variables.get("_this").value), //#TODO remove this. We don't want this
-	game_value(),
-	GProfilerAdapter->createScope(static_cast<r_string>(name), profName, __LINE__)
+    game_value(),
+    GProfilerAdapter->createScope(static_cast<r_string>(name), profName, __LINE__)
     );
-	//#TODO retrieve line from callstack
+    //#TODO retrieve line from callstack
     return game_value(new GameDataProfileScope(std::move(data)));
 }
 
@@ -184,114 +184,114 @@ game_value profilerSleep(game_state&) {
 }
 
 game_value profilerCaptureFrame(game_state&) {
-	auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
-	if (!armaDiagProf) return {};
-	armaDiagProf->captureFrame();
+    auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
+    if (!armaDiagProf) return {};
+    armaDiagProf->captureFrame();
     return {};
 }
 
 game_value profilerCaptureFrames(game_state&, game_value_parameter count) {
-	auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
-	if (!armaDiagProf) return {};
-	armaDiagProf->captureFrames(static_cast<uint32_t>(static_cast<float>(count)));
+    auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
+    if (!armaDiagProf) return {};
+    armaDiagProf->captureFrames(static_cast<uint32_t>(static_cast<float>(count)));
     return {};
 }
 
 game_value profilerCaptureSlowFrame(game_state&, game_value_parameter threshold) {
-	auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
-	if (!armaDiagProf) return {};
-	armaDiagProf->captureSlowFrame(chrono::milliseconds(static_cast<float>(threshold)));
+    auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
+    if (!armaDiagProf) return {};
+    armaDiagProf->captureSlowFrame(chrono::milliseconds(static_cast<float>(threshold)));
     return {};
 }
 
 game_value profilerCaptureTrigger(game_state&) {
-	auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
-	if (!armaDiagProf) return {};
-	armaDiagProf->captureTrigger();
+    auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
+    if (!armaDiagProf) return {};
+    armaDiagProf->captureTrigger();
     return {};
 }
 
 game_value profilerTrigger(game_state&) {
-	auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
-	if (!armaDiagProf) return {};
-	armaDiagProf->profilerTrigger();
+    auto armaDiagProf = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
+    if (!armaDiagProf) return {};
+    armaDiagProf->profilerTrigger();
     return {};
 }
 
 game_value profilerLog(game_state&, game_value_parameter message) {
-	GProfilerAdapter->addLog(message);
+    GProfilerAdapter->addLog(message);
     return {};
 }
 
 game_value profilerSetOutputFile(game_state& state, game_value_parameter file) {
 #ifdef WITH_CHROME
-	auto chromeAdapter = std::dynamic_pointer_cast<AdapterChrome>(GProfilerAdapter);
-	if (!chromeAdapter) {
-		state.set_script_error(game_state::game_evaluator::evaluator_error_type::bad_var, "not using ChromeAdapter"sv);
-		return {};
-	}
+    auto chromeAdapter = std::dynamic_pointer_cast<AdapterChrome>(GProfilerAdapter);
+    if (!chromeAdapter) {
+        state.set_script_error(game_state::game_evaluator::evaluator_error_type::bad_var, "not using ChromeAdapter"sv);
+        return {};
+    }
 
-	chromeAdapter->setTargetFile(static_cast<std::string_view>(static_cast<r_string>(file)));
+    chromeAdapter->setTargetFile(static_cast<std::string_view>(static_cast<r_string>(file)));
 #endif
-	return {};
+    return {};
 }
 
 game_value profilerSetAdapter(game_state&, game_value_parameter file) {
-	
-	r_string adap = file;
+    
+    r_string adap = file;
 
-	profiler.waitForAdapter = adap;
-	return {};
+    profiler.waitForAdapter = adap;
+    return {};
 }
 
 game_value profilerSetCounter(game_state&, game_value_parameter name, game_value_parameter value) {
-	GProfilerAdapter->setCounter(name,value);
-	return {};
+    GProfilerAdapter->setCounter(name,value);
+    return {};
 }
 
 //profiles script like diag_codePerformance
 game_value profileScript(game_state& state, game_value_parameter par) {
-	code _code = par[0];
-	int runs = par.get(2).value_or(10000);
+    code _code = par[0];
+    int runs = par.get(2).value_or(10000);
 
-	auto _emptyCode = sqf::compile("");
+    auto _emptyCode = sqf::compile("");
 
-	//CBA fastForEach
+    //CBA fastForEach
 
-	if (par.get(1) && !par[1].is_nil()) {
-		//#TODO we want to create a subscope
-		state.set_local_variable("_this"sv, par[1]);
-	}
+    if (par.get(1) && !par[1].is_nil()) {
+        //#TODO we want to create a subscope
+        state.set_local_variable("_this"sv, par[1]);
+    }
 
-	//prep for action
-	for (int i = 0; i < 1000; ++i) {
-		sqf::call(_emptyCode);
-	}
+    //prep for action
+    for (int i = 0; i < 1000; ++i) {
+        sqf::call(_emptyCode);
+    }
 
-	auto emptyMeasStart = std::chrono::high_resolution_clock::now();
-	for (int i = 0; i < 1000; ++i) {
-		sqf::call(_emptyCode);
-	}
-	auto emptyMeasEnd = std::chrono::high_resolution_clock::now();
+    auto emptyMeasStart = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < 1000; ++i) {
+        sqf::call(_emptyCode);
+    }
+    auto emptyMeasEnd = std::chrono::high_resolution_clock::now();
 
-	auto cycleLoss = std::chrono::duration_cast<std::chrono::nanoseconds>(emptyMeasEnd - emptyMeasStart) / 1000;
+    auto cycleLoss = std::chrono::duration_cast<std::chrono::nanoseconds>(emptyMeasEnd - emptyMeasStart) / 1000;
 
 
-	//prepare
-	for (int i = 0; i < 500; ++i) {
-		sqf::call(_code);
-	}
+    //prepare
+    for (int i = 0; i < 500; ++i) {
+        sqf::call(_code);
+    }
 
-	auto measStart = std::chrono::high_resolution_clock::now();
-	for (int i = 0; i < runs; ++i) {
-		sqf::call(_code);
-	}
-	auto measEnd = std::chrono::high_resolution_clock::now();
+    auto measStart = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < runs; ++i) {
+        sqf::call(_code);
+    }
+    auto measEnd = std::chrono::high_resolution_clock::now();
 
-	auto measTime = std::chrono::duration_cast<std::chrono::duration<double, std::micro>>(measEnd - measStart) / runs;
-	measTime -= cycleLoss;
+    auto measTime = std::chrono::duration_cast<std::chrono::duration<double, std::micro>>(measEnd - measStart) / runs;
+    measTime -= cycleLoss;
 
-	return { static_cast<float>(measTime.count()), std::to_string(measTime.count()) , runs };
+    return { static_cast<float>(measTime.count()), std::to_string(measTime.count()) , runs };
 }
 
 
@@ -327,15 +327,15 @@ std::string getScriptName(const r_string& str, const r_string& filePath, uint32_
     std::match_results<compact_array<char>::const_iterator> scriptNameMatch;
     //scriptName "cba_events_fnc_playerEH_EachFrame";
     if (std::regex_search(str.begin(), str.end(), scriptNameMatch, getScriptName_scriptNameCmdRegex)) {
-		auto mt = scriptNameMatch[1].str();
-		if (mt != "%1") //Skip "%1" from initFunctions
-			return mt; //cba_events_fnc_playerEH_EachFrame
+        auto mt = scriptNameMatch[1].str();
+        if (mt != "%1") //Skip "%1" from initFunctions
+            return mt; //cba_events_fnc_playerEH_EachFrame
     }
     //private _fnc_scriptName = 'CBA_fnc_currentUnit';
     if (std::regex_search(str.begin(), str.end(), scriptNameMatch, getScriptName_scriptNameVarRegex)) {
-		auto mt = scriptNameMatch[1].str();
-		if (mt != "%1") //Skip "%1" from initFunctions
-			return mt; //CBA_fnc_currentUnit
+        auto mt = scriptNameMatch[1].str();
+        if (mt != "%1") //Skip "%1" from initFunctions
+            return mt; //CBA_fnc_currentUnit
     }
 
     std::match_results<compact_array<char>::const_iterator> filePathFindMatch;
@@ -352,7 +352,7 @@ std::string getScriptName(const r_string& str, const r_string& filePath, uint32_
         if (!filePathFromLine.empty() && std::regex_search(filePathFromLine, pathMatchFromline, getScriptName_acefncRegex)) {
             return std::string(pathMatchFromline[1]) + "_" + std::string(pathMatchFromline[2]) + "_fnc_" + std::string(pathMatchFromline[3]); //CBA_common_fnc_currentUnit
         }
-		//\x\cba\addons\common\XEH_preStart.sqf
+        //\x\cba\addons\common\XEH_preStart.sqf
         if (!filePathFromLine.empty() && std::regex_search(filePathFromLine, pathMatchFromline, getScriptName_aceMiscRegex)) {
             return std::string(pathMatchFromline[1]) + "_" + std::string(pathMatchFromline[2]) + "_" + std::string(pathMatchFromline[3]); //CBA_common_XEH_preStart
         }
@@ -407,88 +407,88 @@ std::string getScriptName(const r_string& str, const r_string& filePath, uint32_
 
 
 std::string getScriptFromFirstLine(sourcedocpos& pos, bool compact) {//https://github.com/dedmen/ArmaDebugEngine/blob/master/BIDebugEngine/BIDebugEngine/Script.cpp
-	if (pos.content.empty()) return pos.content.data();
-	auto needSourceFile = pos.sourcefile.empty();
-	int line = pos.sourceline + 1;
-	auto start = pos.content.begin();
-	auto end = pos.content.end();
-	std::string filename(needSourceFile ? "" : pos.sourcefile.data());
-	std::transform(filename.begin(), filename.end(), filename.begin(), tolower);
-	auto curPos = start;
-	auto curLine = 1U;
-	std::string output;
-	bool inWantedFile = needSourceFile;
-	output.reserve(end - start);
+    if (pos.content.empty()) return pos.content.data();
+    auto needSourceFile = pos.sourcefile.empty();
+    int line = pos.sourceline + 1;
+    auto start = pos.content.begin();
+    auto end = pos.content.end();
+    std::string filename(needSourceFile ? "" : pos.sourcefile.data());
+    std::transform(filename.begin(), filename.end(), filename.begin(), tolower);
+    auto curPos = start;
+    auto curLine = 1U;
+    std::string output;
+    bool inWantedFile = needSourceFile;
+    output.reserve(end - start);
 
-	auto removeEmptyLines = [&](size_t count) {
-		for (size_t i = 0; i < count; i++) {
-			auto found = output.find("\n\n");
-			if (found != std::string::npos)
-				output.replace(found, 2, 1, '\n');
-			else if (output.front() == '\n') {
-				output.erase(0, 1);
-			} else {
-				output.replace(0, output.find('\n'), 1, '\n');
-			}
-		}
-	};
+    auto removeEmptyLines = [&](size_t count) {
+        for (size_t i = 0; i < count; i++) {
+            auto found = output.find("\n\n");
+            if (found != std::string::npos)
+                output.replace(found, 2, 1, '\n');
+            else if (output.front() == '\n') {
+                output.erase(0, 1);
+            } else {
+                output.replace(0, output.find('\n'), 1, '\n');
+            }
+        }
+    };
 
-	auto readLineMacro = [&]() {
-		curPos += 6;
-		auto numberEnd = std::find(curPos, end, ' ');
-		auto number = std::stoul(std::string(static_cast<const char*>(curPos), numberEnd - curPos));
-		curPos = numberEnd + 2;
-		auto nameEnd = std::find(curPos, end, '"');
-		std::string name(static_cast<const char*>(curPos), nameEnd - curPos);
-		std::transform(name.begin(), name.end(), name.begin(), tolower);
-		if (needSourceFile) {
-			needSourceFile = false;
-			filename = name;
-		}
-		bool wasInWantedFile = inWantedFile;
-		inWantedFile = (name == filename);
-		if (inWantedFile) {
-			if (number < curLine) removeEmptyLines((curLine - number));
-			curLine = number;
-		}
-		if (*(nameEnd + 1) == '\r') ++nameEnd;
-		curPos = nameEnd + 2;
-		//if (inWantedFile && *curPos == '\n') {
-		//	curPos++;
-		//}//after each #include there is a newline which we also don't want
-
-
-		if (wasInWantedFile) {
-			output.append("#include \"");
-			output.append(name);
-			output.append("\"\n");
-			curLine++;
-		}
+    auto readLineMacro = [&]() {
+        curPos += 6;
+        auto numberEnd = std::find(curPos, end, ' ');
+        auto number = std::stoul(std::string(static_cast<const char*>(curPos), numberEnd - curPos));
+        curPos = numberEnd + 2;
+        auto nameEnd = std::find(curPos, end, '"');
+        std::string name(static_cast<const char*>(curPos), nameEnd - curPos);
+        std::transform(name.begin(), name.end(), name.begin(), tolower);
+        if (needSourceFile) {
+            needSourceFile = false;
+            filename = name;
+        }
+        bool wasInWantedFile = inWantedFile;
+        inWantedFile = (name == filename);
+        if (inWantedFile) {
+            if (number < curLine) removeEmptyLines((curLine - number));
+            curLine = number;
+        }
+        if (*(nameEnd + 1) == '\r') ++nameEnd;
+        curPos = nameEnd + 2;
+        //if (inWantedFile && *curPos == '\n') {
+        //    curPos++;
+        //}//after each #include there is a newline which we also don't want
 
 
-		return curPos <= end;
-	};
-	auto readLine = [&]() {
-		if (curPos > end) return false;
-		if (*curPos == '#' && *(curPos+1) == 'l') return readLineMacro();
-		auto lineEnd = std::find(curPos, end, '\n') + 1;
-		if (inWantedFile) {
-			output.append(static_cast<const char*>(curPos), lineEnd - curPos);
-			curLine++;
-		}
-		//line is curPos -> lineEnd
-		curPos = lineEnd;
-		return curPos <= end;
-	};
-	while (readLine()) {};
-	if (compact) {
-		//http://stackoverflow.com/a/24315631
-		size_t start_pos;
-		while ((start_pos = output.find("\n\n\n", 0)) != std::string::npos) {
-			output.replace(start_pos, 3, "\n");
-		}
-	}
-	return output;
+        if (wasInWantedFile) {
+            output.append("#include \"");
+            output.append(name);
+            output.append("\"\n");
+            curLine++;
+        }
+
+
+        return curPos <= end;
+    };
+    auto readLine = [&]() {
+        if (curPos > end) return false;
+        if (*curPos == '#' && *(curPos+1) == 'l') return readLineMacro();
+        auto lineEnd = std::find(curPos, end, '\n') + 1;
+        if (inWantedFile) {
+            output.append(static_cast<const char*>(curPos), lineEnd - curPos);
+            curLine++;
+        }
+        //line is curPos -> lineEnd
+        curPos = lineEnd;
+        return curPos <= end;
+    };
+    while (readLine()) {};
+    if (compact) {
+        //http://stackoverflow.com/a/24315631
+        size_t start_pos;
+        while ((start_pos = output.find("\n\n\n", 0)) != std::string::npos) {
+            output.replace(start_pos, 3, "\n");
+        }
+    }
+    return output;
 }
 
 
@@ -529,18 +529,15 @@ public:
 
         typedef bool(
 #ifndef __linux__
-			__thiscall 
+            __thiscall 
 #endif
-			*OrigEx)(game_instruction*, game_state&, vm_context&);
+            *OrigEx)(game_instruction*, game_state&, vm_context&);
         return reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionConst)(this, state, t);
     }
 
     int stack_size(void* t) const override { return 0; }
     r_string get_name() const override { return ""sv; }
 };
-
-
-
 
 void addScopeInstruction(ref<compact_array<ref<game_instruction>>>& bodyCode, const std::string& scriptName) {
 #ifndef __linux__
@@ -584,7 +581,7 @@ void addScopeInstruction(ref<compact_array<ref<game_instruction>>>& bodyCode, co
 #ifdef __linux__
     static const size_t ConstTypeIDHash = 600831349;
 #else
-	static const size_t ConstTypeIDHash = 0x0a56f03038a03360ull;
+    static const size_t ConstTypeIDHash = 0x0a56f03038a03360ull;
 #endif
     for (auto& it : *bodyCode) {
 
@@ -595,10 +592,10 @@ void addScopeInstruction(ref<compact_array<ref<game_instruction>>>& bodyCode, co
 
         auto typeHash = typeid(*it.get()).hash_code();
 
-		//linux
+        //linux
         //auto typeN = typeid(*it.get()).name();
-		//std::string stuff = std::to_string(typeHash) + " " + typeN;
-		//sqf::diag_log(stuff);
+        //std::string stuff = std::to_string(typeHash) + " " + typeN;
+        //sqf::diag_log(stuff);
 
 
         if (typeHash != ConstTypeIDHash) continue;
@@ -611,36 +608,53 @@ void addScopeInstruction(ref<compact_array<ref<game_instruction>>>& bodyCode, co
     }
 }
 
+std::optional<r_string> tryGetNameFromCBACompile(game_state& state) {
+    
+    auto ctx = state.get_vm_context();
+    for (auto& it : ctx->callstack) {
+        
+
+        auto& vars = it->_varSpace;
+
+        for (auto& it : vars) {
+            if (it.)
+        }
+
+
+    }
+
+}
+
 
 game_value compileRedirect2(game_state& state, game_value_parameter message) {
-	if (!profiler.compileScope) {
-		static r_string compileEventText("compile");
-		static r_string profName("scriptProfiler.cpp");
-		profiler.compileScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
-	}
+    if (!profiler.compileScope) {
+        static r_string compileEventText("compile");
+        static r_string profName("scriptProfiler.cpp");
+        profiler.compileScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
+    }
 
-	auto tempData = GProfilerAdapter->enterScope(profiler.compileScope);
+    auto tempData = GProfilerAdapter->enterScope(profiler.compileScope);
 
     r_string str = message;
 
-	auto comp = sqf::compile(str);
-	auto bodyCode = static_cast<game_data_code*>(comp.data.get());
-	if (!bodyCode->instructions) {
-		GProfilerAdapter->leaveScope(tempData);
-		return comp;
-	}
+    auto comp = sqf::compile(str);
+    auto bodyCode = static_cast<game_data_code*>(comp.data.get());
+    if (!bodyCode->instructions) {
+        GProfilerAdapter->leaveScope(tempData);
+        return comp;
+    }
 
 #ifdef WITH_BROFILER
-	if (auto brofilerData = std::dynamic_pointer_cast<ScopeTempStorageBrofiler>(tempData)) {
-		r_string src = getScriptFromFirstLine(bodyCode->instructions->front()->sdp, false);
-		brofilerData->evtDt->sourceCode = src;
-	}
+    if (auto brofilerData = std::dynamic_pointer_cast<ScopeTempStorageBrofiler>(tempData)) {
+        r_string src = getScriptFromFirstLine(bodyCode->instructions->front()->sdp, false);
+        brofilerData->evtDt->sourceCode = src;
+    }
 #endif
 
-	GProfilerAdapter->leaveScope(tempData);
+    GProfilerAdapter->leaveScope(tempData);
 
     auto& funcPath = bodyCode->instructions->front()->sdp.sourcefile;
-	//#TODO pass instructions to getScriptName and check if there is a "scriptName" or "scopeName" unary command call
+    //#TODO pass instructions to getScriptName and check if there is a "scriptName" or "scopeName" unary command call
     std::string scriptName = getScriptName(str, funcPath, 32);
     //if (scriptName.empty()) scriptName = "<unknown>";
 
@@ -688,34 +702,34 @@ game_value compileRedirectFinal(game_state& state, game_value_parameter message)
 }
 
 game_value callExtensionRedirect(game_state&, game_value_parameter ext, game_value_parameter msg) {
-	if (!profiler.callExtScope) {
-		static r_string compileEventText("callExtension");
-		static r_string profName("scriptProfiler.cpp");
-		profiler.callExtScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
-	}
+    if (!profiler.callExtScope) {
+        static r_string compileEventText("callExtension");
+        static r_string profName("scriptProfiler.cpp");
+        profiler.callExtScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
+    }
 
-	auto tempData = GProfilerAdapter->enterScope(profiler.callExtScope);
+    auto tempData = GProfilerAdapter->enterScope(profiler.callExtScope);
 
     auto res = sqf::call_extension(ext,msg);
 
 #ifdef WITH_BROFILER
-	if (auto brofilerData = std::dynamic_pointer_cast<ScopeTempStorageBrofiler>(tempData)) {
-		brofilerData->evtDt->thisArgs = ext;
-		brofilerData->evtDt->sourceCode = msg;
-	}
+    if (auto brofilerData = std::dynamic_pointer_cast<ScopeTempStorageBrofiler>(tempData)) {
+        brofilerData->evtDt->thisArgs = ext;
+        brofilerData->evtDt->sourceCode = msg;
+    }
 #endif
 
-	GProfilerAdapter->leaveScope(tempData);
+    GProfilerAdapter->leaveScope(tempData);
 
-	return res;
+    return res;
 }
 
 game_value diag_logRedirect(game_state&, game_value_parameter msg) {
-	r_string str = static_cast<r_string>(msg);
+    r_string str = static_cast<r_string>(msg);
 
-	GProfilerAdapter->addLog(str);
-	sqf::diag_log(msg);
-	return {};
+    GProfilerAdapter->addLog(str);
+    sqf::diag_log(msg);
+    return {};
 }
 
 std::string get_command_line() {
@@ -734,17 +748,17 @@ std::string get_command_line() {
 }
 
 std::optional<std::string> getCommandLineParam(std::string_view needle) {
-	std::string commandLine = get_command_line();
-	const auto found = commandLine.find(needle);
+    std::string commandLine = get_command_line();
+    const auto found = commandLine.find(needle);
     if (found != std::string::npos) {
-	    const auto spacePos = commandLine.find(' ', found + needle.length() + 1);
-	    const auto valueLength = spacePos - (found + needle.length() + 1);
+        const auto spacePos = commandLine.find(' ', found + needle.length() + 1);
+        const auto valueLength = spacePos - (found + needle.length() + 1);
         auto adapterStr = commandLine.substr(found + needle.length() + 1, valueLength);
         if (adapterStr.back() == '"')
             adapterStr = adapterStr.substr(0, adapterStr.length() - 1);
-		return adapterStr;
+        return adapterStr;
     }
-	return {};
+    return {};
 }
 
 scriptProfiler::scriptProfiler() {
@@ -754,135 +768,135 @@ scriptProfiler::scriptProfiler() {
 #pragma region Instructions
 namespace intercept::__internal {
 
-	class gsFuncBase {
-	public:
-		r_string _name;
-		void copyPH(const gsFuncBase* other) noexcept {
-			securityStuff = other->securityStuff;
-			//std::copy(std::begin(other->securityStuff), std::end(other->securityStuff), std::begin(securityStuff));
-		}
-	private:
-		std::array<size_t,
+    class gsFuncBase {
+    public:
+        r_string _name;
+        void copyPH(const gsFuncBase* other) noexcept {
+            securityStuff = other->securityStuff;
+            //std::copy(std::begin(other->securityStuff), std::end(other->securityStuff), std::begin(securityStuff));
+        }
+    private:
+        std::array<size_t,
 #if _WIN64 || __X86_64__
-			10
+            10
 #else
 #ifdef __linux__
-			8
+            8
 #else
-			11
+            11
 #endif
 #endif
-		> securityStuff{};  //Will scale with x64
-							//size_t securityStuff[11];
-	};
-	class gsFunction : public gsFuncBase {
-		void* placeholder12{ nullptr };//0x30  //jni function
-	public:
-		r_string _name2;//0x34 this is (tolower name)
-		unary_operator * _operator;//0x38
+        > securityStuff{};  //Will scale with x64
+                            //size_t securityStuff[11];
+    };
+    class gsFunction : public gsFuncBase {
+        void* placeholder12{ nullptr };//0x30  //jni function
+    public:
+        r_string _name2;//0x34 this is (tolower name)
+        unary_operator * _operator;//0x38
 #ifndef __linux__
-		r_string _rightType;//0x3c RString to something
-		r_string _description;//0x38
-		r_string _example;
-		r_string _example2;
-		r_string placeholder_11;
-		r_string placeholder_12;
-		r_string _category{ "intercept"sv }; //0x48
+        r_string _rightType;//0x3c RString to something
+        r_string _description;//0x38
+        r_string _example;
+        r_string _example2;
+        r_string placeholder_11;
+        r_string placeholder_12;
+        r_string _category{ "intercept"sv }; //0x48
 #endif
-											 //const rv_string* placeholder13;
-	};
-	class gsOperator : public gsFuncBase {
-		void* placeholder12{ nullptr };//0x30  JNI function
-	public:
-		r_string _name2;//0x34 this is (tolower name)
-		int32_t placeholder_10{ 4 }; //0x38 Small int 0-5  priority
-		binary_operator * _operator;//0x3c
+                                             //const rv_string* placeholder13;
+    };
+    class gsOperator : public gsFuncBase {
+        void* placeholder12{ nullptr };//0x30  JNI function
+    public:
+        r_string _name2;//0x34 this is (tolower name)
+        int32_t placeholder_10{ 4 }; //0x38 Small int 0-5  priority
+        binary_operator * _operator;//0x3c
 #ifndef __linux__
-		r_string _leftType;//0x40 Description of left hand side parameter
-		r_string _rightType;//0x44 Description of right hand side parameter
-		r_string _description;//0x48
-		r_string _example;//0x4c
-		r_string placeholder_11;//0x60
-		r_string _version;//0x64 some version number
-		r_string placeholder_12;//0x68
-		r_string _category{ "intercept"sv }; //0x6c
+        r_string _leftType;//0x40 Description of left hand side parameter
+        r_string _rightType;//0x44 Description of right hand side parameter
+        r_string _description;//0x48
+        r_string _example;//0x4c
+        r_string placeholder_11;//0x60
+        r_string _version;//0x64 some version number
+        r_string placeholder_12;//0x68
+        r_string _category{ "intercept"sv }; //0x6c
 #endif
-	};
-	class gsNular : public gsFuncBase {
-	public:
-		r_string _name2;//0x30 this is (tolower name)
-		nular_operator * _operator;//0x34
+    };
+    class gsNular : public gsFuncBase {
+    public:
+        r_string _name2;//0x30 this is (tolower name)
+        nular_operator * _operator;//0x34
 #ifndef __linux__
-		r_string _description;//0x38
-		r_string _example;
-		r_string _example2;
-		r_string _version;//0x44 some version number
-		r_string placeholder_10;
-		r_string _category; //0x4d
+        r_string _description;//0x38
+        r_string _example;
+        r_string _example2;
+        r_string _version;//0x44 some version number
+        r_string placeholder_10;
+        r_string _category; //0x4d
 #endif
-		void* placeholder11{ nullptr };//0x50 JNI probably
-		const char *get_map_key() const noexcept { return _name2.data(); }
-	};
+        void* placeholder11{ nullptr };//0x50 JNI probably
+        const char *get_map_key() const noexcept { return _name2.data(); }
+    };
 
 
 
-	class game_functions : public auto_array<gsFunction>, public gsFuncBase {
-	public:
-		game_functions(r_string name) : _name(std::move(name)) {}
-		r_string _name;
-		game_functions() noexcept {}
-		const char *get_map_key() const noexcept { return _name.data(); }
-	};
+    class game_functions : public auto_array<gsFunction>, public gsFuncBase {
+    public:
+        game_functions(r_string name) : _name(std::move(name)) {}
+        r_string _name;
+        game_functions() noexcept {}
+        const char *get_map_key() const noexcept { return _name.data(); }
+    };
 
-	class game_operators : public auto_array<gsOperator>, public gsFuncBase {
-	public:
-		game_operators(r_string name) : _name(std::move(name)) {}
-		r_string _name;
-		int32_t placeholder10{ 4 }; //0x2C Small int 0-5  priority
-		game_operators() noexcept {}
-		const char *get_map_key() const noexcept { return _name.data(); }
-	};
+    class game_operators : public auto_array<gsOperator>, public gsFuncBase {
+    public:
+        game_operators(r_string name) : _name(std::move(name)) {}
+        r_string _name;
+        int32_t placeholder10{ 4 }; //0x2C Small int 0-5  priority
+        game_operators() noexcept {}
+        const char *get_map_key() const noexcept { return _name.data(); }
+    };
 }
 
 
 class GameInstructionVariable : public game_instruction {
 public:
-	r_string name;
-	static inline std::unordered_map<size_t, std::shared_ptr<ScopeInfo>> descriptions;
-	virtual bool exec(game_state& state, vm_context& t) {
-		typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
-		
-		if (instructionLevelProfiling) {
-			static r_string setVar("getVar");
+    r_string name;
+    static inline std::unordered_map<size_t, std::shared_ptr<ScopeInfo>> descriptions;
+    virtual bool exec(game_state& state, vm_context& t) {
+        typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
+        
+        if (instructionLevelProfiling) {
+            static r_string setVar("getVar");
 
-			auto found = descriptions.find(reinterpret_cast<size_t>(name.data()));
-			if (found == descriptions.end()) {
-				
-				auto newStuff = GProfilerAdapter->createScope(setVar,name,0);
-				auto ret = descriptions.insert({reinterpret_cast<size_t>(name.data()), newStuff});
-				found = ret.first;
-			}
+            auto found = descriptions.find(reinterpret_cast<size_t>(name.data()));
+            if (found == descriptions.end()) {
+                
+                auto newStuff = GProfilerAdapter->createScope(setVar,name,0);
+                auto ret = descriptions.insert({reinterpret_cast<size_t>(name.data()), newStuff});
+                found = ret.first;
+            }
 
-			auto temp = GProfilerAdapter->enterScope(found->second);
-			auto res = reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionVariable)(this, state, t);
-			GProfilerAdapter->leaveScope(temp);
-			return res;
-		}
+            auto temp = GProfilerAdapter->enterScope(found->second);
+            auto res = reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionVariable)(this, state, t);
+            GProfilerAdapter->leaveScope(temp);
+            return res;
+        }
 
-		return reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionVariable)(this, state, t);
-	}
-	virtual int stack_size(void* t) const { return 0; }
-	virtual r_string get_name() const { return ""sv; }
+        return reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionVariable)(this, state, t);
+    }
+    virtual int stack_size(void* t) const { return 0; }
+    virtual r_string get_name() const { return ""sv; }
 };
 
 class GameInstructionOperator : public game_instruction {
 public:
-	const intercept::__internal::game_operators *_operators;
+    const intercept::__internal::game_operators *_operators;
 
-	static inline std::unordered_map<size_t, std::shared_ptr<ScopeInfo>> descriptions;
+    static inline std::unordered_map<size_t, std::shared_ptr<ScopeInfo>> descriptions;
 
-	virtual bool exec(game_state& state, vm_context& t) {
-		/*
+    virtual bool exec(game_state& state, vm_context& t) {
+        /*
             if (false && !sqf::can_suspend() && !state.eval->local->variables.has_key("1scp")) {
                 auto found = descriptions.find(sdp.content.hash());
                 if (found == descriptions.end()) {
@@ -912,122 +926,122 @@ public:
                 }
 
             }
-		*/
+        */
 
-		typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
+        typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
 
-		if (instructionLevelProfiling) {
-			auto instructionName = _operators->_name;
+        if (instructionLevelProfiling) {
+            auto instructionName = _operators->_name;
 
-			auto found = descriptions.find(reinterpret_cast<size_t>(instructionName.data()));
-			if (found == descriptions.end()) {
-				
-				auto newStuff = GProfilerAdapter->createScope(instructionName,{},0);
-				auto ret = descriptions.insert({reinterpret_cast<size_t>(instructionName.data()), newStuff});
-				found = ret.first;
-			}
+            auto found = descriptions.find(reinterpret_cast<size_t>(instructionName.data()));
+            if (found == descriptions.end()) {
+                
+                auto newStuff = GProfilerAdapter->createScope(instructionName,{},0);
+                auto ret = descriptions.insert({reinterpret_cast<size_t>(instructionName.data()), newStuff});
+                found = ret.first;
+            }
 
-			auto temp = GProfilerAdapter->enterScope(found->second);
-			auto res = reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionOperator)(this, state, t);
-			GProfilerAdapter->leaveScope(temp);
-			return res;
-		}
+            auto temp = GProfilerAdapter->enterScope(found->second);
+            auto res = reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionOperator)(this, state, t);
+            GProfilerAdapter->leaveScope(temp);
+            return res;
+        }
 
-		return reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionOperator)(this, state, t);
-	}
-	virtual int stack_size(void* t) const { return 0; }
-	virtual r_string get_name() const { return ""sv; }
+        return reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionOperator)(this, state, t);
+    }
+    virtual int stack_size(void* t) const { return 0; }
+    virtual r_string get_name() const { return ""sv; }
 };
 
 class GameInstructionFunction : public game_instruction {
 public:
-	const intercept::__internal::game_functions *_functions;
+    const intercept::__internal::game_functions *_functions;
 
-	static inline std::unordered_map<size_t, std::shared_ptr<ScopeInfo>> descriptions;
+    static inline std::unordered_map<size_t, std::shared_ptr<ScopeInfo>> descriptions;
 
-	virtual bool exec(game_state& state, vm_context& t) {
-		typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
-		
-		if (instructionLevelProfiling) {
-			auto instructionName = _functions->_name;
+    virtual bool exec(game_state& state, vm_context& t) {
+        typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
+        
+        if (instructionLevelProfiling) {
+            auto instructionName = _functions->_name;
 
-			auto found = descriptions.find(reinterpret_cast<size_t>(instructionName.data()));
-			if (found == descriptions.end()) {
-				
-				auto newStuff = GProfilerAdapter->createScope(instructionName,{},0);
-				auto ret = descriptions.insert({reinterpret_cast<size_t>(instructionName.data()), newStuff});
-				found = ret.first;
-			}
+            auto found = descriptions.find(reinterpret_cast<size_t>(instructionName.data()));
+            if (found == descriptions.end()) {
+                
+                auto newStuff = GProfilerAdapter->createScope(instructionName,{},0);
+                auto ret = descriptions.insert({reinterpret_cast<size_t>(instructionName.data()), newStuff});
+                found = ret.first;
+            }
 
-			auto temp = GProfilerAdapter->enterScope(found->second);
-			auto res = reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionFunction)(this, state, t);
-			GProfilerAdapter->leaveScope(temp);
-			return res;
-		}
+            auto temp = GProfilerAdapter->enterScope(found->second);
+            auto res = reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionFunction)(this, state, t);
+            GProfilerAdapter->leaveScope(temp);
+            return res;
+        }
 
 
         return reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionFunction)(this, state, t);
-	}
-	virtual int stack_size(void* t) const { return 0; }
-	virtual r_string get_name() const { return ""sv; }
+    }
+    virtual int stack_size(void* t) const { return 0; }
+    virtual r_string get_name() const { return ""sv; }
 };
 
 class GameInstructionArray : public game_instruction {
 public:
-	int size;
-	virtual bool exec(game_state& state, vm_context& t) {
-		//static const r_string InstrName = "I_Array"sv;
-		//static Brofiler::EventDescription* autogenerated_description = ::Brofiler::EventDescription::Create(InstrName, __FILE__, __LINE__);
-		//Brofiler::Event autogenerated_event_639(*autogenerated_description);
+    int size;
+    virtual bool exec(game_state& state, vm_context& t) {
+        //static const r_string InstrName = "I_Array"sv;
+        //static Brofiler::EventDescription* autogenerated_description = ::Brofiler::EventDescription::Create(InstrName, __FILE__, __LINE__);
+        //Brofiler::Event autogenerated_event_639(*autogenerated_description);
 
-		typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
-		return reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionArray)(this, state, t);
-	}
-	virtual int stack_size(void* t) const { return 0; }
-	virtual r_string get_name() const { return ""sv; }
+        typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
+        return reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionArray)(this, state, t);
+    }
+    virtual int stack_size(void* t) const { return 0; }
+    virtual r_string get_name() const { return ""sv; }
 };
 
 class GameInstructionAssignment : public game_instruction {
 public:
-	r_string name;
-	bool forceLocal;
-	static inline std::unordered_map<size_t, std::shared_ptr<ScopeInfo>> descriptions;
-	virtual bool exec(game_state& state, vm_context& t) {
-		typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
+    r_string name;
+    bool forceLocal;
+    static inline std::unordered_map<size_t, std::shared_ptr<ScopeInfo>> descriptions;
+    virtual bool exec(game_state& state, vm_context& t) {
+        typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
 
-		if (instructionLevelProfiling) {
-			static r_string setVar("assignVar");
+        if (instructionLevelProfiling) {
+            static r_string setVar("assignVar");
 
-			auto found = descriptions.find(reinterpret_cast<size_t>(name.data()));
-			if (found == descriptions.end()) {
-				
-				auto newStuff = GProfilerAdapter->createScope(setVar,name,0);
-				auto ret = descriptions.insert({reinterpret_cast<size_t>(name.data()), newStuff});
-				found = ret.first;
-			}
+            auto found = descriptions.find(reinterpret_cast<size_t>(name.data()));
+            if (found == descriptions.end()) {
+                
+                auto newStuff = GProfilerAdapter->createScope(setVar,name,0);
+                auto ret = descriptions.insert({reinterpret_cast<size_t>(name.data()), newStuff});
+                found = ret.first;
+            }
 
-			auto temp = GProfilerAdapter->enterScope(found->second);
-			auto res = reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionAssignment)(this, state, t);
-			GProfilerAdapter->leaveScope(temp);
-			return res;
-		}
+            auto temp = GProfilerAdapter->enterScope(found->second);
+            auto res = reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionAssignment)(this, state, t);
+            GProfilerAdapter->leaveScope(temp);
+            return res;
+        }
 
-		return reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionAssignment)(this, state, t);
-	}
-	virtual int stack_size(void* t) const { return 0; }
-	virtual r_string get_name() const { return ""sv; }
+        return reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionAssignment)(this, state, t);
+    }
+    virtual int stack_size(void* t) const { return 0; }
+    virtual r_string get_name() const { return ""sv; }
 };
 
 class GameInstructionNewExpression : public game_instruction {
 public:
-	int beg{ 0 };
-	int end{ 0 };
+    int beg{ 0 };
+    int end{ 0 };
     //static inline std::map<size_t, Brofiler::EventDescription*> descriptions;
 
-	virtual bool exec(game_state& state, vm_context& t) {
-		//static const r_string InstrName = "I_NewExpression"sv;
-		//static Brofiler::EventDescription* autogenerated_description = ::Brofiler::EventDescription::Create(InstrName, __FILE__, __LINE__);
-		//Brofiler::Event autogenerated_event_639(*autogenerated_description);
+    virtual bool exec(game_state& state, vm_context& t) {
+        //static const r_string InstrName = "I_NewExpression"sv;
+        //static Brofiler::EventDescription* autogenerated_description = ::Brofiler::EventDescription::Create(InstrName, __FILE__, __LINE__);
+        //Brofiler::Event autogenerated_event_639(*autogenerated_description);
         //if (scopeLevelCounter == 0) {
         //    auto srcHash = t.sdoc._content.hash();
         //    auto found = descriptions.find(srcHash);
@@ -1048,19 +1062,19 @@ public:
         //}
 
 
-		typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
-		return reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionNewExpression)(this, state, t);
-	}
-	virtual int stack_size(void* t) const { return 0; }
-	virtual r_string get_name() const { return ""sv; }
+        typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
+        return reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionNewExpression)(this, state, t);
+    }
+    virtual int stack_size(void* t) const { return 0; }
+    virtual r_string get_name() const { return ""sv; }
 };
 
 #pragma endregion Instructions
 #endif
 void scriptProfiler::preStart() {
-	sqf::diag_log("Arma Script Profiler preStart");
+    sqf::diag_log("Arma Script Profiler preStart");
     if (getCommandLineParam("-profilerEnableInstruction"sv)) {
-		sqf::diag_log("ASP: Instruction Level profiling enabled"sv);
+        sqf::diag_log("ASP: Instruction Level profiling enabled"sv);
         instructionLevelProfiling = true;
     }
 
@@ -1073,7 +1087,7 @@ void scriptProfiler::preStart() {
         else if (*startAdapter == "Chrome"sv) {
             auto chromeAdapter = std::make_shared<AdapterChrome>();
             GProfilerAdapter = chromeAdapter;
-			sqf::diag_log("ASP: Selected Chrome Adapter"sv);
+            sqf::diag_log("ASP: Selected Chrome Adapter"sv);
 
             auto chromeOutput = getCommandLineParam("-profilerOutput"sv);
             if (chromeOutput)
@@ -1083,34 +1097,34 @@ void scriptProfiler::preStart() {
         }
         else if (*startAdapter == "Brofiler"sv) {
             GProfilerAdapter = std::make_shared<AdapterBrofiler>();
-			sqf::diag_log("ASP: Selected Brofiler Adapter"sv);
+            sqf::diag_log("ASP: Selected Brofiler Adapter"sv);
 #endif
         }
         else if (*startAdapter == "Arma"sv) {
             GProfilerAdapter = std::make_shared<AdapterArmaDiag>();
-			sqf::diag_log("ASP: Selected ArmaDiag Adapter"sv);
+            sqf::diag_log("ASP: Selected ArmaDiag Adapter"sv);
         }
         else if (*startAdapter == "Tracy"sv) {
             GProfilerAdapter = std::make_shared<AdapterTracy>();
-			sqf::diag_log("ASP: Selected Tracy Adapter"sv);
+            sqf::diag_log("ASP: Selected Tracy Adapter"sv);
         }
     }
     else {
         GProfilerAdapter = std::make_shared<AdapterTracy>();
-		sqf::diag_log("ASP: Selected Tracy Adapter"sv);
+        sqf::diag_log("ASP: Selected Tracy Adapter"sv);
     }
 
 
-	if (getCommandLineParam("-profilerEnableEngine"sv)) {
-		diag_log("ASP: Enable Engine Profiling"sv);
-		if (intercept::sqf::product_version().branch != "Profile") {
-			intercept::sqf::diag_log("ERROR ArmaScriptProfiler: Cannot enable engine profiling without Profiling build of Arma"sv);
-		} else {
-			engineProf = std::make_shared<EngineProfiling>();
+    if (getCommandLineParam("-profilerEnableEngine"sv)) {
+        diag_log("ASP: Enable Engine Profiling"sv);
+        if (intercept::sqf::product_version().branch != "Profile") {
+            intercept::sqf::diag_log("ERROR ArmaScriptProfiler: Cannot enable engine profiling without Profiling build of Arma"sv);
+        } else {
+            engineProf = std::make_shared<EngineProfiling>();
 
             if (getCommandLineParam("-profilerEngineMTO"sv)) {
-	            engineProf->setMainThreadOnly();
-				diag_log("ASP: Engine profiler main thread only mode"sv);
+                engineProf->setMainThreadOnly();
+                diag_log("ASP: Engine profiler main thread only mode"sv);
             }
 
             if (getCommandLineParam("-profilerEngineNoFile"sv)) {
@@ -1123,8 +1137,8 @@ void scriptProfiler::preStart() {
                 diag_log("ASP: Engine profiler NoMem mode"sv);
             }
 
-			engineFrameEnd = true;
-		}
+            engineFrameEnd = true;
+        }
     }
     static auto codeType = client::host::register_sqf_type("ProfileScope"sv, "ProfileScope"sv, "Dis is a profile scope. It profiles things."sv, "ProfileScope"sv, createGameDataProfileScope);
     GameDataProfileScope_type = codeType.second;
@@ -1140,106 +1154,106 @@ void scriptProfiler::preStart() {
     static auto _profilerSetAdapter = client::host::register_sqf_command("profilerSetAdapter", "Set's profiler Adapter", profilerSetAdapter, game_data_type::NOTHING, game_data_type::STRING);
     static auto _profilerSetCounter = client::host::register_sqf_command("profilerSetCounter", "Set's a counter value", profilerSetCounter, game_data_type::NOTHING, game_data_type::STRING, game_data_type::SCALAR);
 
-	
-	static auto _profilerCompile = client::host::register_sqf_command("compile", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
+    
+    static auto _profilerCompile = client::host::register_sqf_command("compile", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
     //static auto _profilerCompile2 = client::host::register_sqf_command("compile2", "Profiler redirect", compileRedirect, game_data_type::CODE, game_data_type::STRING);
     //static auto _profilerCompile3 = client::host::register_sqf_command("compile3", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
     static auto _profilerCompileF = client::host::register_sqf_command("compileFinal", "Profiler redirect", compileRedirectFinal, game_data_type::CODE, game_data_type::STRING);
-	static auto _profilerCallExt = client::host::register_sqf_command("callExtension", "Profiler redirect", callExtensionRedirect, game_data_type::STRING, game_data_type::STRING, game_data_type::STRING);
-	static auto _profilerDiagLog = client::host::register_sqf_command("diag_log", "Profiler redirect", diag_logRedirect, game_data_type::NOTHING, game_data_type::ANY);
-	static auto _profilerProfScript = client::host::register_sqf_command("profileScript", "Profiler redirect", profileScript, game_data_type::ARRAY, game_data_type::ARRAY);
-	static auto _profilerPrepFile = client::host::register_sqf_command("preprocessFile", "Profiler redirect", [](game_state&, game_value_parameter arg) -> game_value {
-		if (!profiler.preprocFileScope) {
-			static r_string compileEventText("preprocessFile");
-			static r_string profName("scriptProfiler.cpp");
-			profiler.preprocFileScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
-		}
+    static auto _profilerCallExt = client::host::register_sqf_command("callExtension", "Profiler redirect", callExtensionRedirect, game_data_type::STRING, game_data_type::STRING, game_data_type::STRING);
+    static auto _profilerDiagLog = client::host::register_sqf_command("diag_log", "Profiler redirect", diag_logRedirect, game_data_type::NOTHING, game_data_type::ANY);
+    static auto _profilerProfScript = client::host::register_sqf_command("profileScript", "Profiler redirect", profileScript, game_data_type::ARRAY, game_data_type::ARRAY);
+    static auto _profilerPrepFile = client::host::register_sqf_command("preprocessFile", "Profiler redirect", [](game_state&, game_value_parameter arg) -> game_value {
+        if (!profiler.preprocFileScope) {
+            static r_string compileEventText("preprocessFile");
+            static r_string profName("scriptProfiler.cpp");
+            profiler.preprocFileScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
+        }
 
-		auto tempData = GProfilerAdapter->enterScope(profiler.preprocFileScope);
+        auto tempData = GProfilerAdapter->enterScope(profiler.preprocFileScope);
 
-		GProfilerAdapter->setName(tempData, "preprocessFile "+static_cast<r_string>(arg));
+        GProfilerAdapter->setName(tempData, "preprocessFile "+static_cast<r_string>(arg));
 
-		auto res = sqf::preprocess_file_line_numbers(arg);
+        auto res = sqf::preprocess_file_line_numbers(arg);
 
-		GProfilerAdapter->leaveScope(tempData);
+        GProfilerAdapter->leaveScope(tempData);
 
-		return res;
-	}, game_data_type::STRING, game_data_type::STRING);
-	static auto _profilerPrepFileLN = client::host::register_sqf_command("preprocessFileLineNumbers", "Profiler redirect", [](game_state&, game_value_parameter arg) -> game_value {
-		if (!profiler.preprocFileScope) {
-			static r_string compileEventText("preprocessFileLineNumbers");
-			static r_string profName("scriptProfiler.cpp");
-			profiler.preprocFileScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
-		}
+        return res;
+    }, game_data_type::STRING, game_data_type::STRING);
+    static auto _profilerPrepFileLN = client::host::register_sqf_command("preprocessFileLineNumbers", "Profiler redirect", [](game_state&, game_value_parameter arg) -> game_value {
+        if (!profiler.preprocFileScope) {
+            static r_string compileEventText("preprocessFileLineNumbers");
+            static r_string profName("scriptProfiler.cpp");
+            profiler.preprocFileScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
+        }
 
-		auto tempData = GProfilerAdapter->enterScope(profiler.preprocFileScope);
+        auto tempData = GProfilerAdapter->enterScope(profiler.preprocFileScope);
 
-		GProfilerAdapter->setName(tempData, "preprocessFile "+static_cast<r_string>(arg));
+        GProfilerAdapter->setName(tempData, "preprocessFile "+static_cast<r_string>(arg));
 
-		auto res = sqf::preprocess_file_line_numbers(arg);
+        auto res = sqf::preprocess_file_line_numbers(arg);
 
-		GProfilerAdapter->leaveScope(tempData);
+        GProfilerAdapter->leaveScope(tempData);
 
-		return res;
-	}, game_data_type::STRING, game_data_type::STRING);
+        return res;
+    }, game_data_type::STRING, game_data_type::STRING);
 
 #ifndef __linux__
-	auto iface = client::host::request_plugin_interface("sqf_asm_devIf", 1);
-	if (iface) {
-		GVt = *static_cast<vtables*>(*iface);
-		DWORD dwVirtualProtectBackup;
+    auto iface = client::host::request_plugin_interface("sqf_asm_devIf", 1);
+    if (iface) {
+        GVt = *static_cast<vtables*>(*iface);
+        DWORD dwVirtualProtectBackup;
 
-		//#TODO only do if instruction profiling startparameter is present
+        //#TODO only do if instruction profiling startparameter is present
         game_instruction* ins;
         //ins = new GameInstructionConst();
-		//VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionConst), 14u, 0x40u, &dwVirtualProtectBackup);
-		//oldFunc.vt_GameInstructionConst = GVt.vt_GameInstructionConst[3];
-		//GVt.vt_GameInstructionConst[3] = (*reinterpret_cast<void***>(ins))[3];
-		//VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionConst), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
-		//delete ins;
+        //VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionConst), 14u, 0x40u, &dwVirtualProtectBackup);
+        //oldFunc.vt_GameInstructionConst = GVt.vt_GameInstructionConst[3];
+        //GVt.vt_GameInstructionConst[3] = (*reinterpret_cast<void***>(ins))[3];
+        //VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionConst), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
+        //delete ins;
         //
-		ins = new GameInstructionVariable();
-		VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionVariable), 14u, 0x40u, &dwVirtualProtectBackup);
-		oldFunc.vt_GameInstructionVariable = GVt.vt_GameInstructionVariable[3];
-		GVt.vt_GameInstructionVariable[3] = (*reinterpret_cast<void***>(ins))[3];
-		VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionVariable), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
-		delete ins;
+        ins = new GameInstructionVariable();
+        VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionVariable), 14u, 0x40u, &dwVirtualProtectBackup);
+        oldFunc.vt_GameInstructionVariable = GVt.vt_GameInstructionVariable[3];
+        GVt.vt_GameInstructionVariable[3] = (*reinterpret_cast<void***>(ins))[3];
+        VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionVariable), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
+        delete ins;
         
-		ins = new GameInstructionOperator();
-		VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionOperator), 14u, 0x40u, &dwVirtualProtectBackup);
-		oldFunc.vt_GameInstructionOperator = GVt.vt_GameInstructionOperator[3];
-		GVt.vt_GameInstructionOperator[3] = (*reinterpret_cast<void***>(ins))[3];
-		VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionOperator), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
-		delete ins;
+        ins = new GameInstructionOperator();
+        VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionOperator), 14u, 0x40u, &dwVirtualProtectBackup);
+        oldFunc.vt_GameInstructionOperator = GVt.vt_GameInstructionOperator[3];
+        GVt.vt_GameInstructionOperator[3] = (*reinterpret_cast<void***>(ins))[3];
+        VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionOperator), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
+        delete ins;
 
-		ins = new GameInstructionFunction();
-		VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionFunction), 14u, 0x40u, &dwVirtualProtectBackup);
-		oldFunc.vt_GameInstructionFunction = GVt.vt_GameInstructionFunction[3];
-		GVt.vt_GameInstructionFunction[3] = (*reinterpret_cast<void***>(ins))[3];
-		VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionFunction), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
-		delete ins;
+        ins = new GameInstructionFunction();
+        VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionFunction), 14u, 0x40u, &dwVirtualProtectBackup);
+        oldFunc.vt_GameInstructionFunction = GVt.vt_GameInstructionFunction[3];
+        GVt.vt_GameInstructionFunction[3] = (*reinterpret_cast<void***>(ins))[3];
+        VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionFunction), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
+        delete ins;
 
-		//ins = new GameInstructionArray();
-		//VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionArray), 14u, 0x40u, &dwVirtualProtectBackup);
-		//oldFunc.vt_GameInstructionArray = GVt.vt_GameInstructionArray[3];
-		//GVt.vt_GameInstructionArray[3] = (*reinterpret_cast<void***>(ins))[3];
-		//VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionArray), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
-		//delete ins;
+        //ins = new GameInstructionArray();
+        //VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionArray), 14u, 0x40u, &dwVirtualProtectBackup);
+        //oldFunc.vt_GameInstructionArray = GVt.vt_GameInstructionArray[3];
+        //GVt.vt_GameInstructionArray[3] = (*reinterpret_cast<void***>(ins))[3];
+        //VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionArray), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
+        //delete ins;
         //
-		ins = new GameInstructionAssignment();
-		VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionAssignment), 14u, 0x40u, &dwVirtualProtectBackup);
-		oldFunc.vt_GameInstructionAssignment = GVt.vt_GameInstructionAssignment[3];
-		GVt.vt_GameInstructionAssignment[3] = (*reinterpret_cast<void***>(ins))[3];
-		VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionAssignment), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
-		delete ins;
+        ins = new GameInstructionAssignment();
+        VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionAssignment), 14u, 0x40u, &dwVirtualProtectBackup);
+        oldFunc.vt_GameInstructionAssignment = GVt.vt_GameInstructionAssignment[3];
+        GVt.vt_GameInstructionAssignment[3] = (*reinterpret_cast<void***>(ins))[3];
+        VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionAssignment), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
+        delete ins;
 
-		//ins = new GameInstructionNewExpression();
-		//VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionNewExpression), 14u, 0x40u, &dwVirtualProtectBackup);
-		//oldFunc.vt_GameInstructionNewExpression = GVt.vt_GameInstructionNewExpression[3];
-		//GVt.vt_GameInstructionNewExpression[3] = (*reinterpret_cast<void***>(ins))[3];
-		//VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionNewExpression), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
-		//delete ins;
-	}
+        //ins = new GameInstructionNewExpression();
+        //VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionNewExpression), 14u, 0x40u, &dwVirtualProtectBackup);
+        //oldFunc.vt_GameInstructionNewExpression = GVt.vt_GameInstructionNewExpression[3];
+        //GVt.vt_GameInstructionNewExpression[3] = (*reinterpret_cast<void***>(ins))[3];
+        //VirtualProtect(reinterpret_cast<LPVOID>(GVt.vt_GameInstructionNewExpression), 14u, dwVirtualProtectBackup, &dwVirtualProtectBackup);
+        //delete ins;
+    }
 #endif
 }
 
@@ -1248,41 +1262,41 @@ client::EHIdentifierHandle endFrameHandle;
 
 
 void scriptProfiler::perFrame() {
-	if (!engineFrameEnd)
-		GProfilerAdapter->perFrame();
+    if (!engineFrameEnd)
+        GProfilerAdapter->perFrame();
 
-	if (!waitForAdapter.empty()) {
-		compileScope.reset();
-		callExtScope.reset();
-		preprocFileScope.reset();
+    if (!waitForAdapter.empty()) {
+        compileScope.reset();
+        callExtScope.reset();
+        preprocFileScope.reset();
 
-		if (false) {
-#ifdef WITH_CHROME	
-		} else if (waitForAdapter == "Chrome") {
-			auto chromeAdapter = std::dynamic_pointer_cast<AdapterChrome>(GProfilerAdapter);
-			if (!chromeAdapter) {
-				std::shared_ptr<ProfilerAdapter> newAdapter = std::make_shared<AdapterChrome>();
-				GProfilerAdapter.swap(newAdapter);
-				newAdapter->cleanup();
-			}
+        if (false) {
+#ifdef WITH_CHROME    
+        } else if (waitForAdapter == "Chrome") {
+            auto chromeAdapter = std::dynamic_pointer_cast<AdapterChrome>(GProfilerAdapter);
+            if (!chromeAdapter) {
+                std::shared_ptr<ProfilerAdapter> newAdapter = std::make_shared<AdapterChrome>();
+                GProfilerAdapter.swap(newAdapter);
+                newAdapter->cleanup();
+            }
 #endif
 #ifdef WITH_BROFILER
-		} else if (waitForAdapter == "Brofiler") {
-			auto brofilerAdapter = std::dynamic_pointer_cast<AdapterBrofiler>(GProfilerAdapter);
-			if (!brofilerAdapter) {
-				std::shared_ptr<ProfilerAdapter> newAdapter = std::make_shared<AdapterBrofiler>();
-				GProfilerAdapter.swap(newAdapter);
-				newAdapter->cleanup();
-			}
+        } else if (waitForAdapter == "Brofiler") {
+            auto brofilerAdapter = std::dynamic_pointer_cast<AdapterBrofiler>(GProfilerAdapter);
+            if (!brofilerAdapter) {
+                std::shared_ptr<ProfilerAdapter> newAdapter = std::make_shared<AdapterBrofiler>();
+                GProfilerAdapter.swap(newAdapter);
+                newAdapter->cleanup();
+            }
 #endif
-		} else if (waitForAdapter == "Arma") {
-			auto armaAdapter = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
-			if (!armaAdapter) {
-				std::shared_ptr<ProfilerAdapter> newAdapter = std::make_shared<AdapterArmaDiag>();
-				GProfilerAdapter.swap(newAdapter);
-				newAdapter->cleanup();
-			}
-		} else if (waitForAdapter == "Tracy") {
+        } else if (waitForAdapter == "Arma") {
+            auto armaAdapter = std::dynamic_pointer_cast<AdapterArmaDiag>(GProfilerAdapter);
+            if (!armaAdapter) {
+                std::shared_ptr<ProfilerAdapter> newAdapter = std::make_shared<AdapterArmaDiag>();
+                GProfilerAdapter.swap(newAdapter);
+                newAdapter->cleanup();
+            }
+        } else if (waitForAdapter == "Tracy") {
             auto tracyAdapter = std::dynamic_pointer_cast<AdapterTracy>(GProfilerAdapter);
             if (!tracyAdapter) {
                 std::shared_ptr<ProfilerAdapter> newAdapter = std::make_shared<AdapterTracy>();
@@ -1290,8 +1304,8 @@ void scriptProfiler::perFrame() {
                 newAdapter->cleanup();
             }
         }
-		waitForAdapter.clear();
-	}
+        waitForAdapter.clear();
+    }
 }
 
 void scriptProfiler::preInit() {
@@ -1335,8 +1349,8 @@ void copyToClipboard(r_string txt) {
 class ArmaScriptProfiler_ProfInterface {
 public:
     virtual game_value createScope(r_string name) {
-		auto data = std::make_shared<GameDataProfileScope::scopeData>(name, game_value(),
-			GProfilerAdapter->createScope(name, name, 0));
+        auto data = std::make_shared<GameDataProfileScope::scopeData>(name, game_value(),
+            GProfilerAdapter->createScope(name, name, 0));
 
         return game_value(new GameDataProfileScope(std::move(data)));
     }
