@@ -41,9 +41,12 @@ public:
 
     virtual void cleanup() {}
 
-    bool IsScheduledSupported() const { return supportsScheduled; }
+    bool isScheduledSupported() const { return supportsScheduled; }
+    void setOmitFilePaths() { omitFilePaths = true; }
+    bool getOmitFilePaths() const { return omitFilePaths; }
     AdapterType getType() const { return type; }
 protected:
     bool supportsScheduled = false;
+    bool omitFilePaths = false;
     AdapterType type = AdapterType::invalid;
 };

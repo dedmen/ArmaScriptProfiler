@@ -37,6 +37,8 @@ void AdapterTracy::perFrame() {
 std::shared_ptr<ScopeInfo> AdapterTracy::createScope(intercept::types::r_string name,
     intercept::types::r_string filename, uint32_t fileline) {
     
+    if (getOmitFilePaths()) filename.clear();
+
     auto tuple = std::make_tuple(name,filename,fileline);
     auto found = scopeCache.find(tuple);
     if (found == scopeCache.end()) {

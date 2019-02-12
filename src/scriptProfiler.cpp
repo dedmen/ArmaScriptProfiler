@@ -93,7 +93,7 @@ public:
     }
 
     bool exec(game_state& state, vm_context& ctx) override {
-        if (!GProfilerAdapter->IsScheduledSupported() &&/*ctx.scheduled || */sqf::can_suspend()) return false;
+        if (!GProfilerAdapter->isScheduledSupported() &&/*ctx.scheduled || */sqf::can_suspend()) return false;
 
        
         auto ev = state.get_evaluator();
@@ -616,9 +616,9 @@ std::optional<r_string> tryGetNameFromCBACompile(game_state& state) {
 
         auto& vars = it->_varSpace;
 
-        for (auto& it : vars) {
-            if (it.)
-        }
+        //for (auto& it : vars) {
+        //    if (it.)
+        //}
 
 
     }
@@ -1114,7 +1114,6 @@ void scriptProfiler::preStart() {
         sqf::diag_log("ASP: Selected Tracy Adapter"sv);
     }
 
-
     if (getCommandLineParam("-profilerEnableEngine"sv)) {
         diag_log("ASP: Enable Engine Profiling"sv);
         if (intercept::sqf::product_version().branch != "Profile") {
@@ -1140,6 +1139,12 @@ void scriptProfiler::preStart() {
             engineFrameEnd = true;
         }
     }
+
+    if (getCommandLineParam("-profilerNoPaths"sv)) {
+        diag_log("ASP: Omitting file paths"sv);
+        GProfilerAdapter->setOmitFilePaths();
+    }
+
     static auto codeType = client::host::register_sqf_type("ProfileScope"sv, "ProfileScope"sv, "Dis is a profile scope. It profiles things."sv, "ProfileScope"sv, createGameDataProfileScope);
     GameDataProfileScope_type = codeType.second;
     static auto _createProfileScope = client::host::register_sqf_command("createProfileScope", "Creates a ProfileScope", createProfileScope, codeType.first, game_data_type::STRING);
