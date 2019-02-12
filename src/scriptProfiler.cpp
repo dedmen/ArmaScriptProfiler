@@ -1121,17 +1121,17 @@ void scriptProfiler::preStart() {
         } else {
             engineProf = std::make_shared<EngineProfiling>();
 
-            if (getCommandLineParam("-profilerEngineMTO"sv)) {
+            if (!getCommandLineParam("-profilerEngineThreads"sv)) {
                 engineProf->setMainThreadOnly();
                 diag_log("ASP: Engine profiler main thread only mode"sv);
             }
 
-            if (getCommandLineParam("-profilerEngineNoFile"sv)) {
+            if (!getCommandLineParam("-profilerEngineDoFile"sv)) {
                 engineProf->setNoFile();
                 diag_log("ASP: Engine profiler NoFile mode"sv);
             }
 
-            if (getCommandLineParam("-profilerEngineNoMem"sv)) {
+            if (!getCommandLineParam("-profilerEngineDoMem"sv)) {
                 engineProf->setNoMem();
                 diag_log("ASP: Engine profiler NoMem mode"sv);
             }
