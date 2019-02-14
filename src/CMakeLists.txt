@@ -124,7 +124,6 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 	target_link_libraries(${INTERCEPT_PLUGIN_NAME} "libstdc++.a")
 
 else()
-
 	target_compile_options(
 		${INTERCEPT_PLUGIN_NAME} PRIVATE 
 		"/MP" "/Zi"
@@ -141,4 +140,12 @@ endif()
 if(CMAKE_COMPILER_IS_GNUCXX)
 	set_target_properties(${INTERCEPT_NETWORK_NAME} PROPERTIES LINK_SEARCH_START_STATIC 1)
 	set_target_properties(${INTERCEPT_NETWORK_NAME} PROPERTIES LINK_SEARCH_END_STATIC 1)
+endif()
+
+#Binary signing
+if(EXISTS "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/sign.bat")
+	add_custom_command(TARGET ${INTERCEPT_PLUGIN_NAME}
+		POST_BUILD
+		COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/sign.bat
+	)
 endif()

@@ -111,7 +111,7 @@ public:
 
         //data->createPos = ctx.get_current_position();
 #ifdef WITH_CHROME
-        if (GProfilerAdapter->IsScheduledSupported() && sqf::can_suspend()) {
+        if (GProfilerAdapter->isScheduledSupported() && sqf::can_suspend()) {
             if (auto chromeStorage = std::dynamic_pointer_cast<ScopeTempStorageChrome>(data->scopeTempStorage))
                 chromeStorage->threadID = reinterpret_cast<uint64_t>(&ctx);
         }
@@ -622,7 +622,7 @@ std::optional<r_string> tryGetNameFromCBACompile(game_state& state) {
 
 
     }
-
+    return {};
 }
 
 
