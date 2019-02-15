@@ -1,9 +1,8 @@
 cmake_minimum_required (VERSION 3.13)
-#if (${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
-#	set (CMAKE_SYSTEM_VERSION 6.3 CACHE TYPE INTERNAL FORCE) #Force 8.1 SDK, to keep it compatible with win7
-#endif()
-project (ArmaScriptProfiler CXX ASM)
-
+if (${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
+	set (CMAKE_SYSTEM_VERSION 8.1 CACHE TYPE INTERNAL FORCE) #Force 8.1 SDK, to keep it compatible with win7
+endif()
+project (ArmaScriptProfiler CXX ASM_MASM)
 find_package (Threads)
 
 option(USE_64BIT_BUILD "USE_64BIT_BUILD" OFF)
@@ -48,6 +47,5 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set(CMAKE_SUPPRESS_REGENERATION true)
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
-
 
 add_subdirectory(src)

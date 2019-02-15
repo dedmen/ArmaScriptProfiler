@@ -67,21 +67,6 @@ set(library_sources ${INTERCEPT_ASP_SOURCES})
 
 add_library( ${INTERCEPT_PLUGIN_NAME} SHARED ${library_sources} ${INTERCEPT_SOURCES} ${BROFILER_SOURCES})
 
-
-
-if (MSVC AND CMAKE_CL_64)
-  add_custom_command(TARGET ${INTERCEPT_PLUGIN_NAME}
-                            PRE_BUILD
-                            COMMAND "ml64" /c /W2 /nologo /errorReport:none /Zf 
-                            /Fo${CMAKE_BINARY_DIR}/src/CMakeFiles/ArmaScriptProfiler_x64.dir/hooks.asm.obj
-							#${CMAKE_PROJECT_NAME}.dir/Debug/ 
-                            #/Fo"C:/MYPROJECT/Build/Main_ms100_64/MYPROJECT.dir/Debug/"
-                            ${CMAKE_SOURCE_DIR}/src/hooks.asm
-                            COMMENT "Building asm file")
-endif()
-
-
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${INTERCEPT_INCLUDE_PATH} )
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${BROFILER_INCLUDE_PATH} )
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${TRACY_INCLUDE_PATH} )
@@ -147,5 +132,6 @@ if(EXISTS "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/sign.bat")
 	add_custom_command(TARGET ${INTERCEPT_PLUGIN_NAME}
 		POST_BUILD
 		COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/sign.bat
+		WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 	)
 endif()
