@@ -16,8 +16,9 @@ public:
 
 class ScopeTempStorageTracy final : public ScopeTempStorage {
 public:
-    std::unique_ptr<tracy::ScopedZone> zone;
-    std::thread::id origin;
+
+    ScopeTempStorageTracy(const tracy::SourceLocationData* srcloc) : zone(srcloc) {}
+    tracy::ScopedZone zone;
 };
 
 AdapterTracy::AdapterTracy() {
@@ -53,35 +54,29 @@ std::shared_ptr<ScopeInfo> AdapterTracy::createScope(intercept::types::r_string 
 
 std::shared_ptr<ScopeTempStorage> AdapterTracy::enterScope(std::shared_ptr<ScopeInfo> scope) {
     auto info = std::dynamic_pointer_cast<ScopeInfoTracy>(scope);
-    if (!info) return nullptr; //#TODO debugbreak? log error?
+    if (!info || !isConnected()) return nullptr; //#TODO debugbreak? log error?
     ensureReady();
 
-    auto ret = std::make_shared<ScopeTempStorageTracy>();
-    //ret->origin = std::this_thread::get_id();
-    ret->zone = std::make_unique<tracy::ScopedZone>(&info->info, true);
+    auto ret = std::make_shared<ScopeTempStorageTracy>(&info->info);
     return ret;
 }
 void AdapterTracy::leaveScope(std::shared_ptr<ScopeTempStorage> tempStorage) {
     auto tmpStorage = std::dynamic_pointer_cast<ScopeTempStorageTracy>(tempStorage);
     if (!tmpStorage) return; //#TODO debugbreak? log error?
 
-
-    //if (tmpStorage->origin != std::this_thread::get_id())
-    //    __debugbreak();
-
-    tmpStorage->zone.reset(); //zone destructor ends zone
+    tmpStorage->zone.end(); //zone destructor ends zone
 }
 
 void AdapterTracy::setName(std::shared_ptr<ScopeTempStorage> tempStorage, const intercept::types::r_string& name) {
     auto tmpStorage = std::dynamic_pointer_cast<ScopeTempStorageTracy>(tempStorage);
     if (!tmpStorage) return; //#TODO debugbreak? log error?
-    tmpStorage->zone->Name(name.c_str(), name.length());
+    tmpStorage->zone.Name(name.c_str(), name.length());
 }
 
 void AdapterTracy::setDescription(std::shared_ptr<ScopeTempStorage> tempStorage, const intercept::types::r_string& descr) {
     auto tmpStorage = std::dynamic_pointer_cast<ScopeTempStorageTracy>(tempStorage);
     if (!tmpStorage) return; //#TODO debugbreak? log error?
-    tmpStorage->zone->Text(descr.c_str(), descr.length());
+    tmpStorage->zone.Text(descr.c_str(), descr.length());
 }
 
 void AdapterTracy::addLog(intercept::types::r_string message) {

@@ -28,26 +28,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -106,7 +106,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;$(SolutionDir)..\tracy;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>WITH_BROFILER;WITH_CHROME;_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
@@ -142,7 +142,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)..\Intercept\src\client\headers;$(SolutionDir)..\Intercept\src\client\headers\client;$(SolutionDir)..\Intercept\src\client\headers\shared;$(SolutionDir)..\Intercept\src\client\headers\client\sqf;$(SolutionDir)..\Intercept\src;$(SolutionDir)..\brofiler\BrofilerCore;$(SolutionDir)..\brofiler\ThirdParty\TaskScheduler\Scheduler\Include;$(SolutionDir)..\tracy;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>WITH_BROFILER;WITH_CHROME;_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;INTERCEPT_SQF_STRTYPE_RSTRING;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
@@ -172,6 +172,7 @@
     <ClInclude Include="HookManager.hpp" />
     <ClInclude Include="ProfilerAdapter.hpp" />
     <ClInclude Include="scriptProfiler.hpp" />
+    <ClInclude Include="SignalSlot.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\brofiler\BrofilerCore\CallstackCollector.cpp" />
@@ -234,8 +235,14 @@
     <ClCompile Include="..\intercept\src\client\intercept\shared\containers.cpp" />
     <ClCompile Include="..\intercept\src\client\intercept\shared\types.cpp" />
     <ClCompile Include="AdapterArmaDiag.cpp" />
-    <ClCompile Include="AdapterBrofiler.cpp" />
-    <ClCompile Include="AdapterChrome.cpp" />
+    <ClCompile Include="AdapterBrofiler.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="AdapterChrome.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="AdapterTracy.cpp" />
     <ClCompile Include="EngineProfiling.cpp" />
     <ClCompile Include="HookManager.cpp" />

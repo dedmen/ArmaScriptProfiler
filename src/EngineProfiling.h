@@ -108,6 +108,7 @@ class EngineProfiling {
 public:
 	EngineProfiling();
 	~EngineProfiling() = default;
+    void init();
     void setMainThreadOnly();
     void setNoFile();
     void setNoMem();

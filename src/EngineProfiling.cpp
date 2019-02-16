@@ -4,6 +4,7 @@
 #include <client.hpp>
 #include <shared_mutex>
 #include "scriptProfiler.hpp"
+#include "SignalSlot.hpp"
 
 extern std::shared_ptr<ProfilerAdapter> GProfilerAdapter;
 
@@ -22,12 +23,14 @@ thread_local std::unique_ptr<std::unordered_map<std::pair<PCounter*, int>, std::
 thread_local bool openScopesInit;
 std::unordered_map<PCounter*, std::shared_ptr<ScopeInfo>> scopeCache;
 std::shared_mutex scopeCacheMtx;
-std::optional<std::thread::id> mainThread;
 bool noFile = false;
 bool noMem = false;
+bool tracyConnected = false;
+bool checkMainThread = false;
+thread_local bool isMainThread = false;
 
 std::string getScriptName(const r_string& str, const r_string& filePath, uint32_t returnFirstLineIfNoName = 0);
-void addScopeInstruction(ref<compact_array<ref<game_instruction>>>& bodyCode, const std::string& scriptName);
+void addScopeInstruction(ref<compact_array<ref<game_instruction>>>& bodyCode, const r_string& scriptName);
 
 
 extern "C" {
@@ -49,25 +52,18 @@ extern "C" {
 
         if (sdp.content.length() < 64 || !x || !*x || x->get()->size() < 16) return;
 
-        auto name = getScriptName(sdp.content, sdp.sourcefile, 32);
-        if (name != "<unknown>" && !name.empty())
+        r_string name = getScriptName(sdp.content, sdp.sourcefile, 32);
+        if (!name.empty() && name != "<unknown>"sv)
             addScopeInstruction(*x, name);
-
-
-
     }
-
-
 }
 
 bool PCounter::shouldTime() {
     if (slot < 0) return false;
 
-    if (GProfilerAdapter->getType() != AdapterType::Tracy) return false;
-    auto tracyProf = std::dynamic_pointer_cast<AdapterTracy>(GProfilerAdapter);
-    if (!tracyProf->isConnected()) return false;
+    if (checkMainThread && !isMainThread) return false;
+    if (!tracyConnected) return false;
 
-    if (mainThread && *mainThread != std::this_thread::get_id()) return false;
     //exclude security cat, evwfGet evGet and so on as they spam too much and aren't useful
     if (cat && cat[0] == 's' && cat[1] == 'e' && cat[2] == 'c' && cat[3] == 'u') return false;
     if (noFile && cat && cat[0] == 'f' && cat[1] == 'i' && cat[2] == 'l' && cat[3] == 'e') return false;
@@ -77,18 +73,28 @@ bool PCounter::shouldTime() {
     if (cat && cat[0] == 't' && cat[1] == 'e' && cat[2] == 'x' && cat[3] == 0) return false; //tex
     if (name && name[0] == 'I' && name[1] == 'G' && name[2] == 'S' && name[3] == 'M') return false; //IGSMM no idea what that is, but generates a lot of calls
     if (name && name[0] == 'm' && name[1] == 'a' && name[2] == 'n' && name[3] == 'C') return false; //Man update error. calltime is about constant and uninteresting
-    
 
+    auto tracyProf = std::reinterpret_pointer_cast<AdapterTracy>(GProfilerAdapter);
 
-    std::shared_lock lock(scopeCacheMtx);
-    auto found = scopeCache.find(this);
-    if (found == scopeCache.end()) {
-        lock.unlock();
-        std::unique_lock lockInternal(scopeCacheMtx);
-        auto res = scopeCache.insert({ this, tracyProf->createScopeStatic(name, cat, 0) });
-        lockInternal.unlock();//#TODO this is unsafe
-        lock.lock();
-        found = res.first;
+    std::unordered_map<PCounter*, std::shared_ptr<ScopeInfo>>::iterator found;
+
+    if (checkMainThread) {//No locks needed
+        found = scopeCache.find(this);
+        if (found == scopeCache.end()) {
+            auto res = scopeCache.insert({ this, tracyProf->createScopeStatic(name, cat, 0) });
+            found = res.first;
+        }
+    } else {
+        std::shared_lock lock(scopeCacheMtx);
+        found = scopeCache.find(this);
+        if (found == scopeCache.end()) {
+            lock.unlock();
+            std::unique_lock lockInternal(scopeCacheMtx);
+            auto res = scopeCache.insert({ this, tracyProf->createScopeStatic(name, cat, 0) });
+            lockInternal.unlock();//#TODO this is unsafe
+            lock.lock();
+            found = res.first;
+        }
     }
 
     if (!openScopes)
@@ -185,6 +191,19 @@ HookManager::Pattern pat_shouldTime{
 #endif
 
 EngineProfiling::EngineProfiling() {
+
+}
+
+extern Signal<void(bool)> tracyConnectionChanged;
+
+
+void EngineProfiling::init() {
+
+    tracyConnectionChanged.connect([](bool state)
+        {
+            tracyConnected = state;
+        });
+
     //order is important
     //hooks.placeHook(hookTypes::doEnd, pat_doEnd, reinterpret_cast<uintptr_t>(doEnd), profEndJmpback, 1, true);
     hooks.placeHook(hookTypes::scopeCompleted, pat_scopeCompleted, reinterpret_cast<uintptr_t>(scopeCompleted), profEndJmpback, 0);
@@ -203,7 +222,7 @@ EngineProfiling::EngineProfiling() {
 
     auto stuffByte = found + 0x2 + 2;
     uint32_t offs = *reinterpret_cast<uint32_t*>(stuffByte);
-    uint64_t addr = stuffByte + 4+1 + offs;
+    uint64_t addr = stuffByte + 4 + 1 + offs;
     uint64_t base = addr - 0x121;
 #endif
     armaP = reinterpret_cast<ArmaProf*>(base);
@@ -218,7 +237,8 @@ EngineProfiling::EngineProfiling() {
 }
 
 void EngineProfiling::setMainThreadOnly() {
-    mainThread = std::this_thread::get_id();
+    checkMainThread = true;
+    isMainThread = true;
 }
 
 void EngineProfiling::setNoFile() {

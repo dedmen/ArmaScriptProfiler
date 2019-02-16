@@ -83,10 +83,17 @@ game_data* createGameDataProfileScope(param_archive* ar) {
     return x;
 }
 
-class GameInstructionProfileScopeStart : public game_instruction {
+class GameInstructionProfileScopeStart final : public game_instruction {
 public:
     r_string name;
     std::shared_ptr<ScopeInfo> scopeInfo;
+    bool cbaCompile = false;
+
+    GameInstructionProfileScopeStart(r_string name_) {  
+        if (name_ == "CBA_fnc_compileFunction") cbaCompile = true;
+        name = std::move(name_);
+
+    }
 
     void lastRefDeleted() const override {
         rv_allocator<GameInstructionProfileScopeStart>::destroy_deallocate(const_cast<GameInstructionProfileScopeStart *>(this), 1);
@@ -116,7 +123,7 @@ public:
                 chromeStorage->threadID = reinterpret_cast<uint64_t>(&ctx);
         }
 #endif
-        if (name == "CBA_fnc_compileFunction")
+        if (cbaCompile)
             GProfilerAdapter->setDescription(data->scopeTempStorage, state.get_local_variable("_this")[1]);
 
 
@@ -539,7 +546,7 @@ public:
     r_string get_name() const override { return ""sv; }
 };
 
-void addScopeInstruction(ref<compact_array<ref<game_instruction>>>& bodyCode, const std::string& scriptName) {
+void addScopeInstruction(ref<compact_array<ref<game_instruction>>>& bodyCode, const r_string& scriptName) {
 #ifndef __linux__
 #ifndef _WIN64
 #error "no x64 hash codes yet"
@@ -560,8 +567,7 @@ void addScopeInstruction(ref<compact_array<ref<game_instruction>>>& bodyCode, co
 
 
     //Insert instruction to set _x
-    ref<GameInstructionProfileScopeStart> curElInstruction = rv_allocator<GameInstructionProfileScopeStart>::create_single();
-    curElInstruction->name = scriptName;
+    ref<GameInstructionProfileScopeStart> curElInstruction = rv_allocator<GameInstructionProfileScopeStart>::create_single(scriptName);
     curElInstruction->sdp = bodyCode->front()->sdp;
     curElInstruction->scopeInfo = GProfilerAdapter->createScope(curElInstruction->name,
         funcPath.empty() ? curElInstruction->name : funcPath,
@@ -608,23 +614,22 @@ void addScopeInstruction(ref<compact_array<ref<game_instruction>>>& bodyCode, co
     }
 }
 
-std::optional<r_string> tryGetNameFromCBACompile(game_state& state) {
-    
-    auto ctx = state.get_vm_context();
-    for (auto& it : ctx->callstack) {
-        
+std::optional<r_string> tryGetNameFromInitFunctions(game_state& state) {
+    if (state.get_vm_context()->get_current_position().sourcefile != R"(A3\functions_f\initFunctions.sqf)"sv
+        ||
+        state.get_vm_context()->get_current_position().sourceline > 200
+        ) return {};
 
-        auto& vars = it->_varSpace;
-
-        //for (auto& it : vars) {
-        //    if (it.)
-        //}
-
-
-    }
-    return {};
+    r_string fncname = state.get_local_variable("_fncvar"sv);
+    return fncname;
 }
 
+std::optional<r_string> tryGetNameFromCBACompile(game_state& state) {
+    if (state.get_vm_context()->get_current_position().sourcefile != R"(x\cba\addons\xeh\fnc_compileFunction.sqf)"sv) return {};
+
+    r_string fncname = state.get_local_variable("_funcname"sv);
+    return fncname;
+}
 
 game_value compileRedirect2(game_state& state, game_value_parameter message) {
     if (!profiler.compileScope) {
@@ -655,10 +660,11 @@ game_value compileRedirect2(game_state& state, game_value_parameter message) {
 
     auto& funcPath = bodyCode->instructions->front()->sdp.sourcefile;
     //#TODO pass instructions to getScriptName and check if there is a "scriptName" or "scopeName" unary command call
-    std::string scriptName = getScriptName(str, funcPath, 32);
+    r_string scriptName = getScriptName(str, funcPath, 32);
+
     //if (scriptName.empty()) scriptName = "<unknown>";
 
-    if (bodyCode->instructions && !scriptName.empty())// && scriptName != "<unknown>"
+    if (bodyCode->instructions&& bodyCode->instructions->size() > 4 && !scriptName.empty())// && scriptName != "<unknown>"
         addScopeInstruction(bodyCode->instructions, scriptName);
 
     return comp;
@@ -692,11 +698,14 @@ game_value compileRedirectFinal(game_state& state, game_value_parameter message)
     GProfilerAdapter->leaveScope(tempData);
 
     auto& funcPath = bodyCode->instructions->front()->sdp.sourcefile;
-    std::string scriptName = getScriptName(str, funcPath, 32);
+
+    auto scriptName = tryGetNameFromInitFunctions(state);
+    if (!scriptName) scriptName = tryGetNameFromCBACompile(state);
+    if (!scriptName) scriptName = getScriptName(str, funcPath, 32);
     //if (scriptName.empty()) scriptName = "<unknown>";
 
-    if (bodyCode->instructions && !scriptName.empty())// && scriptName != "<unknown>"
-        addScopeInstruction(bodyCode->instructions, scriptName);
+    if (bodyCode->instructions&& bodyCode->instructions->size() > 4 && scriptName && !scriptName->empty())// && scriptName != "<unknown>"
+        addScopeInstruction(bodyCode->instructions, *scriptName);
 
     return comp;
 }
@@ -1137,6 +1146,7 @@ void scriptProfiler::preStart() {
             }
 
             engineFrameEnd = true;
+            engineProf->init();
         }
     }
 
