@@ -44,6 +44,15 @@ public:
             GProfilerAdapter->setThisArgs(scopeTempStorage, std::move(thisArgs));
 #endif
         }
+
+        scopeData(r_string _name, game_value thisArgs, std::shared_ptr<ScopeInfo> scopeInfo, uint64_t threadID) : name(std::move(_name)) {
+            if (!scopeInfo) return;
+
+            scopeTempStorage = GProfilerAdapter->enterScope(scopeInfo, threadID);
+#ifdef WITH_BROFILER
+            GProfilerAdapter->setThisArgs(scopeTempStorage, std::move(thisArgs));
+#endif
+        }
         ~scopeData() {
             GProfilerAdapter->leaveScope(scopeTempStorage);
         }
@@ -1369,6 +1378,14 @@ public:
 
         return game_value(new GameDataProfileScope(std::move(data)));
     }
+
+    //v2
+    virtual game_value createScopeCustomThread(r_string name, uint64_t threadID) {
+        auto data = std::make_shared<GameDataProfileScope::scopeData>(name, game_value(),
+            GProfilerAdapter->createScope(name, name, 0), threadID);
+
+        return game_value(new GameDataProfileScope(std::move(data)));
+    }
 };
 
 static ArmaScriptProfiler_ProfInterface profIface;
@@ -1376,4 +1393,5 @@ static ArmaScriptProfiler_ProfInterface profIface;
 
 void scriptProfiler::registerInterfaces() {
     client::host::register_plugin_interface("ArmaScriptProfilerProfIFace"sv, 1, &profIface);
+    client::host::register_plugin_interface("ArmaScriptProfilerProfIFace"sv, 2, &profIface);
 }

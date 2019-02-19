@@ -43,6 +43,10 @@ std::shared_ptr<ScopeTempStorage> AdapterArmaDiag::enterScope(std::shared_ptr<Sc
     return tempStorage;
 }
 
+std::shared_ptr<ScopeTempStorage> AdapterArmaDiag::enterScope(std::shared_ptr<ScopeInfo> scope, uint64_t threadID) {
+    return enterScope(scope); //not supported
+}
+
 void AdapterArmaDiag::leaveScope(std::shared_ptr<ScopeTempStorage> tempStorage) {
      auto tmpStorage = std::dynamic_pointer_cast<ScopeTempStorageArmaDiag>(tempStorage);
     if (!tmpStorage) return; //#TODO debugbreak? log error?

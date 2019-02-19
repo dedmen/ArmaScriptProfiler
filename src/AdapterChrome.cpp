@@ -64,6 +64,17 @@ std::shared_ptr<ScopeTempStorage> AdapterChrome::enterScope(std::shared_ptr<Scop
     return ret;
 }
 
+std::shared_ptr<ScopeTempStorage> AdapterChrome::enterScope(std::shared_ptr<ScopeInfo> scope, uint64_t threadID) {
+    auto scopeInfo = std::dynamic_pointer_cast<ScopeInfoChrome>(scope);
+    if (!scopeInfo) return nullptr; //#TODO debugbreak? log error?
+
+    auto ret = std::make_shared<ScopeTempStorageChrome>();
+    ret->scopeInfo = scopeInfo;
+    ret->start = std::chrono::high_resolution_clock::now();
+    ret->threadID = threadID;
+    return ret;
+}
+
 void AdapterChrome::leaveScope(std::shared_ptr<ScopeTempStorage> tempStorage) {
     auto endTime = std::chrono::high_resolution_clock::now();
 

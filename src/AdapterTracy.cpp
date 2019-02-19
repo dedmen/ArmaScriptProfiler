@@ -18,6 +18,7 @@ class ScopeTempStorageTracy final : public ScopeTempStorage {
 public:
 
     ScopeTempStorageTracy(const tracy::SourceLocationData* srcloc) : zone(srcloc) {}
+    ScopeTempStorageTracy(const tracy::SourceLocationData* srcloc, uint64_t threadID) : zone(srcloc, threadID) {}
     tracy::ScopedZone zone;
 };
 
@@ -60,6 +61,16 @@ std::shared_ptr<ScopeTempStorage> AdapterTracy::enterScope(std::shared_ptr<Scope
     auto ret = std::make_shared<ScopeTempStorageTracy>(&info->info);
     return ret;
 }
+
+std::shared_ptr<ScopeTempStorage> AdapterTracy::enterScope(std::shared_ptr<ScopeInfo> scope, uint64_t threadID) {
+    auto info = std::dynamic_pointer_cast<ScopeInfoTracy>(scope);
+    if (!info || !isConnected()) return nullptr; //#TODO debugbreak? log error?
+    ensureReady();
+
+    auto ret = std::make_shared<ScopeTempStorageTracy>(&info->info, threadID);
+    return ret;
+}
+
 void AdapterTracy::leaveScope(std::shared_ptr<ScopeTempStorage> tempStorage) {
     auto tmpStorage = std::dynamic_pointer_cast<ScopeTempStorageTracy>(tempStorage);
     if (!tmpStorage) return; //#TODO debugbreak? log error?

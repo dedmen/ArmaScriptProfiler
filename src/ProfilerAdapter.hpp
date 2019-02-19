@@ -30,6 +30,7 @@ public:
     virtual std::shared_ptr<ScopeInfo> createScope(intercept::types::r_string name, intercept::types::r_string filename, uint32_t fileline) = 0;
 
     virtual std::shared_ptr<ScopeTempStorage> enterScope(std::shared_ptr<ScopeInfo> scope) = 0;
+    virtual std::shared_ptr<ScopeTempStorage> enterScope(std::shared_ptr<ScopeInfo> scope, uint64_t threadID) = 0;
     virtual void leaveScope(std::shared_ptr<ScopeTempStorage> tempStorage) = 0;
     virtual void setThisArgs(std::shared_ptr<ScopeTempStorage> tempStorage, intercept::types::game_value thisArgs) {}
     virtual void setName(std::shared_ptr<ScopeTempStorage> tempStorage, const intercept::types::r_string& descr) {}

@@ -60,6 +60,7 @@ public:
 	std::shared_ptr<ScopeInfo> createScope(intercept::types::r_string name, intercept::types::r_string filename,
 		uint32_t fileline) override;
 	std::shared_ptr<ScopeTempStorage> enterScope(std::shared_ptr<ScopeInfo> scope) override;
+	std::shared_ptr<ScopeTempStorage> enterScope(std::shared_ptr<ScopeInfo> scope, uint64_t threadID) override;
 	void leaveScope(std::shared_ptr<ScopeTempStorage> tempStorage) override;
 	void addLog(intercept::types::r_string message) override;
 	void setCounter(intercept::types::r_string name, float val) override;
