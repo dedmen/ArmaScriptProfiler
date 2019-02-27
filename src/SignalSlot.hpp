@@ -21,7 +21,7 @@ public:
     std::vector<ReturnType> emit(Args... args) const {
         std::vector<ReturnType> returnData;
         if (slots.empty())
-            return;
+            return {};
         for (auto& slot : slots) {
             returnData.push_back(slot(args...));
         }

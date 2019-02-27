@@ -10,8 +10,10 @@
 #endif
 #include "ProfilerAdapter.hpp"
 #include "AdapterArmaDiag.hpp"
+#ifdef WITH_BROFILER
 #include "AdapterBrofiler.hpp"
 #include "Event.h"
+#endif
 #include "AdapterChrome.hpp"
 #include "AdapterTracy.hpp"
 #include <memory>
@@ -669,7 +671,7 @@ game_value compileRedirect2(game_state& state, game_value_parameter message) {
 
     auto& funcPath = bodyCode->instructions->front()->sdp.sourcefile;
     //#TODO pass instructions to getScriptName and check if there is a "scriptName" or "scopeName" unary command call
-    r_string scriptName = getScriptName(str, funcPath, 32);
+    r_string scriptName(getScriptName(str, funcPath, 32));
 
     //if (scriptName.empty()) scriptName = "<unknown>";
 

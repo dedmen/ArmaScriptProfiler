@@ -52,7 +52,7 @@ extern "C" {
 
         if (sdp.content.length() < 64 || !x || !*x || x->get()->size() < 16) return;
 
-        r_string name = getScriptName(sdp.content, sdp.sourcefile, 32);
+        r_string name(getScriptName(sdp.content, sdp.sourcefile, 32));
         if (!name.empty() && name != "<unknown>"sv)
             addScopeInstruction(*x, name);
     }
