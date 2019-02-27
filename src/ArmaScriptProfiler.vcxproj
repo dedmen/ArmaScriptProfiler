@@ -147,6 +147,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -169,6 +170,7 @@
     <ClInclude Include="AdapterChrome.hpp" />
     <ClInclude Include="AdapterTracy.hpp" />
     <ClInclude Include="EngineProfiling.h" />
+    <ClInclude Include="FAllocHook.h" />
     <ClInclude Include="HookManager.hpp" />
     <ClInclude Include="ProfilerAdapter.hpp" />
     <ClInclude Include="scriptProfiler.hpp" />
@@ -245,6 +247,7 @@
     </ClCompile>
     <ClCompile Include="AdapterTracy.cpp" />
     <ClCompile Include="EngineProfiling.cpp" />
+    <ClCompile Include="FAllocHook.cpp" />
     <ClCompile Include="HookManager.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="scriptProfiler.cpp" />

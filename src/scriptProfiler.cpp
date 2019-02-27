@@ -1159,6 +1159,12 @@ void scriptProfiler::preStart() {
         }
     }
 
+    if (getCommandLineParam("-profilerEnableFAlloc")) {
+        allocHook = std::make_shared<FAllocHook>();
+        diag_log("ASP: FAlloc instrumentation enabled"sv);
+        allocHook->init();
+    }
+
     if (getCommandLineParam("-profilerNoPaths"sv)) {
         diag_log("ASP: Omitting file paths"sv);
         GProfilerAdapter->setOmitFilePaths();

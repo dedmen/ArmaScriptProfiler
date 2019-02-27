@@ -100,6 +100,10 @@ void AdapterTracy::setCounter(intercept::types::r_string name, float val) {
     tracy::Profiler::PlotData(name.c_str(), val);
 }
 
+void AdapterTracy::setCounter(const char* name, float val) const {
+    tracy::Profiler::PlotData(name, val);
+}
+
 std::shared_ptr<ScopeInfo> AdapterTracy::createScopeStatic(const char* name, const char* filename, uint32_t fileline) const {
     auto info = std::make_shared<ScopeInfoTracy>();
     info->info = tracy::SourceLocationData{nullptr, name, filename,fileline, 0};

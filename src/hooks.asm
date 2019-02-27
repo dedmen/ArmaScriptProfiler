@@ -118,6 +118,87 @@ _TEXT    SEGMENT
     compileCacheIns ENDP
 
 
+	;FAllocHook
+
+
+	EXTERN afterAlloc:				PROC;   ArmaProf::frameEnd
+    EXTERN afterFree:							PROC;
+	
+    ;JmpBacks
+    EXTERN engineAlloc:								qword
+    EXTERN engineFree:						qword
+
+
+
+    EXTERN freealloctmp:						qword
+    EXTERN allocalloctmp:						qword
+
+	doEngineAlloc PROC
+
+		;fixup
+		push    rbx
+		sub     rsp, 20h
+		inc     dword ptr [rcx+60h]
+		mov     rax, [rcx+8]
+		mov     rbx, rcx
+		jmp		engineAlloc;
+
+    doEngineAlloc ENDP
+
+	doEngineFree PROC
+
+		;fixup
+		push    rbx
+		sub     rsp, 20h
+		movsxd  rax, dword ptr [rcx+58h]
+		mov     [rsp+30h], rdi
+		jmp		engineFree;
+    doEngineFree ENDP
+
+
+	;##########
+    PUBLIC engineAllocRedir
+    engineAllocRedir PROC
+		mov allocalloctmp, rcx; get rid of this and just keep rcx on stack
+		call doEngineAlloc;
+		push rax;
+		push rcx;
+		push rdx;
+		push r8;
+		push r9;
+
+		call afterAlloc;
+
+		pop r9;
+		pop r8;
+		pop rdx;
+		pop rcx;
+		pop rax;
+
+		ret
+    engineAllocRedir ENDP
+
+	;##########
+    PUBLIC engineFreeRedir
+    engineFreeRedir PROC
+		mov freealloctmp, rcx; get rid of this, I keep track of rcx now anyway
+		push rax;
+		push r8;
+		push rcx;
+		push rdx;
+		push rcx;
+		call doEngineFree;
+		call afterFree;
+		pop rcx;
+		pop rdx;
+		pop rcx;
+		pop r8;
+		pop rax;
+		ret
+    engineFreeRedir ENDP
+
+
+
 
 
 

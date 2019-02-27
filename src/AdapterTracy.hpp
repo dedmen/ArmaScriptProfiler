@@ -18,7 +18,8 @@ public:
 	void setName(std::shared_ptr<ScopeTempStorage> tempStorage, const intercept::types::r_string& name) override;
 	void setDescription(std::shared_ptr<ScopeTempStorage> tempStorage, const intercept::types::r_string& descr) override;
 	void addLog(intercept::types::r_string message) override;
-	void setCounter(intercept::types::r_string name, float val) override;
+    void setCounter(intercept::types::r_string name, float val) override;
+    void setCounter(const char* name, float val) const;
 
 	std::shared_ptr<ScopeInfo> createScopeStatic(const char* name, const char* filename, uint32_t fileline) const;
 	static bool isConnected();

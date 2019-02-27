@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 #include <functional>
+#include <string_view>
 
 //From ArmaDebugEngine
 
