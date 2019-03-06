@@ -30,7 +30,7 @@ bool checkMainThread = false;
 thread_local bool isMainThread = false;
 
 std::string getScriptName(const r_string& str, const r_string& filePath, uint32_t returnFirstLineIfNoName = 0);
-void addScopeInstruction(ref<compact_array<ref<game_instruction>>>& bodyCode, const r_string& scriptName);
+void addScopeInstruction(auto_array<ref<game_instruction>>& bodyCode, const r_string& scriptName);
 
 
 extern "C" {
@@ -47,14 +47,14 @@ extern "C" {
     void compileCacheIns();
 
     void insertCompileCache(uintptr_t code, sourcedocpos& sdp) {
-        
-        auto x = reinterpret_cast<ref<compact_array<ref<game_instruction>>>*>(code);
-
-        if (sdp.content.length() < 64 || !x || !*x || x->get()->size() < 16) return;
-
-        r_string name(getScriptName(sdp.content, sdp.sourcefile, 32));
-        if (!name.empty() && name != "<unknown>"sv)
-            addScopeInstruction(*x, name);
+        //broken
+        //auto x = reinterpret_cast<ref<compact_array<ref<game_instruction>>>*>(code);
+        //
+        //if (sdp.content.length() < 64 || !x || !*x || x->get()->size() < 16) return;
+        //
+        //r_string name(getScriptName(sdp.content, sdp.sourcefile, 32));
+        //if (!name.empty() && name != "<unknown>"sv)
+        //    addScopeInstruction(x, name);
     }
 }
 
@@ -161,7 +161,7 @@ HookManager::Pattern pat_shouldTime{
 };
 
 #else
-
+//#FIXME
 HookManager::Pattern pat_compileCacheIns{ //1.88.145.302 profv1 013D40B3
     "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx?xxx????xxxx????xxxxx????xxxxxxxxxxxxxxxxxxxxxxxxx????xxx?????xxxx?x????xxxxxxxxxxxxxxxxxxxxx????xxxxxxxxxxxxxxxxx"sv,
     "\x48\x89\x45\xB0\x8B\x43\x10\x89\x45\xB8\x48\x8B\x43\x18\x48\x85\xC0\x74\x03\xF0\xFF\x00\x48\x89\x45\xC0\x8B\x43\x20\x48\x8D\x54\x24\x00\x48\x8D\x0D\x00\x00\x00\x00\x89\x45\xC8\xE8\x00\x00\x00\x00\x48\x8D\x4D\xA8\xE8\x00\x00\x00\x00\x48\x8B\x4D\xA0\x48\x85\xC9\x74\x1C\x41\x8B\xC7\xF0\x0F\xC1\x01\xFF\xC8\x75\x09\x48\x8B\x4D\xA0\xE8\x00\x00\x00\x00\x48\xC7\x45\x00\x00\x00\x00\x00\x48\x8D\x4C\x24\x00\xE8\x00\x00\x00\x00\x4D\x85\xE4\x74\x1D\x41\x8B\xC7\xF0\x41\x0F\xC1\x04\x24\xFF\xC8\x75\x10\x48\x8B\x0D\x00\x00\x00\x00\x49\x8B\xD4\x48\x8B\x01\xFF\x50\x18\x4D\x85\xF6\x74\x1C\x41\x8B\xC7"sv
@@ -210,7 +210,7 @@ void EngineProfiling::init() {
     hooks.placeHook(hookTypes::shouldTime, pat_shouldTime, reinterpret_cast<uintptr_t>(shouldTime), shouldTimeJmpback, 0);
     hooks.placeHook(hookTypes::frameEnd, pat_frameEnd, reinterpret_cast<uintptr_t>(frameEnd), frameEndJmpback, 0);
 #ifndef __linux__
-    hooks.placeHook(hookTypes::compileCacheIns, pat_compileCacheIns, reinterpret_cast<uintptr_t>(compileCacheIns), compileCacheInsJmpback, 0);
+    //hooks.placeHook(hookTypes::compileCacheIns, pat_compileCacheIns, reinterpret_cast<uintptr_t>(compileCacheIns), compileCacheInsJmpback, 0);
 #endif
 #ifdef __linux__
     auto found = hooks.findPattern(pat_doEnd, 0);

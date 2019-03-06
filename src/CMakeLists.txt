@@ -77,7 +77,7 @@ target_link_libraries(${INTERCEPT_PLUGIN_NAME} ${LINK_LIBS})
 
 set_target_properties(${INTERCEPT_PLUGIN_NAME} PROPERTIES PREFIX "")
 set_target_properties(${INTERCEPT_PLUGIN_NAME} PROPERTIES FOLDER ArmaScriptProfiler)
-message("${CONFIGURATION}")
+
 if(CMAKE_COMPILER_IS_GNUCXX)
 	set_source_files_properties(hooks.s PROPERTIES COMPILE_FLAGS "-x assembler-with-cpp")
 	add_compile_definitions(__linux__)
@@ -86,7 +86,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 	target_compile_options(
 		${INTERCEPT_PLUGIN_NAME} PRIVATE 
 		"-std=c++1z"
-		"$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-O3>"
+		"$<$<CONFIG:Release>:-O3>"
 		"-s"
 		"-fPIC"
 		"-fpermissive"
@@ -96,13 +96,13 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 		"-m32"
 		"-Wno-ignored-attributes"
 		"-static"
-		"$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-ffunction-sections>"
-		"$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-fdata-sections>"
+		"$<$<CONFIG:Release>:-ffunction-sections>"
+		"$<$<CONFIG:Release>:-fdata-sections>"
 
 	)
 	target_link_options(${INTERCEPT_PLUGIN_NAME} PRIVATE "-m32" "-fPIC" "-static" "-static-libgcc" "-static-libstdc++"
-	"$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:-Wl,--gc-sections>"
-	"$<$<OR:$<CONFIG:Release>>:-Wl,--strip-all>"
+	"$<$<CONFIG:Release>:-Wl,--gc-sections>"
+	"$<$<CONFIG:Release>:-Wl,--strip-all>"
 	) 
 	set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 
@@ -112,11 +112,11 @@ else()
 	target_compile_options(
 		${INTERCEPT_PLUGIN_NAME} PRIVATE 
 		"/MP" "/Zi"
-		"$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/MT>"
-		"$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/Ox>"
-		"$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/Ob2>"
-		"$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/Oi>"
-		"$<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/Ot>"
+		"$<$<CONFIG:Release>:/MT>"
+		"$<$<CONFIG:Release>:/Ox>"
+		"$<$<CONFIG:Release>:/Ob2>"
+		"$<$<CONFIG:Release>:/Oi>"
+		"$<$<CONFIG:Release>:/Ot>"
 	)
 	target_link_options(${INTERCEPT_PLUGIN_NAME} PRIVATE "/OPT:REF" "/OPT:ICF" "/DEBUG:FULL") 
 endif()
