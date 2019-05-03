@@ -1180,7 +1180,9 @@ void scriptProfiler::preStart() {
     static auto _profilerSetAdapter = client::host::register_sqf_command("profilerSetAdapter", "Set's profiler Adapter", profilerSetAdapter, game_data_type::NOTHING, game_data_type::STRING);
     static auto _profilerSetCounter = client::host::register_sqf_command("profilerSetCounter", "Set's a counter value", profilerSetCounter, game_data_type::NOTHING, game_data_type::STRING, game_data_type::SCALAR);
 
-    if (!getCommandLineParam("-profilerNoInstrumentation"sv)) {
+    auto compHookDisabled = client::host::request_plugin_interface("ProfilerNoCompile", 1); //ASM will call us via interface instead
+
+    if (!compHookDisabled && !getCommandLineParam("-profilerNoInstrumentation"sv)) {
         static auto _profilerCompile = client::host::register_sqf_command("compile", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
         //static auto _profilerCompile2 = client::host::register_sqf_command("compile2", "Profiler redirect", compileRedirect, game_data_type::CODE, game_data_type::STRING);
         //static auto _profilerCompile3 = client::host::register_sqf_command("compile3", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
@@ -1189,41 +1191,42 @@ void scriptProfiler::preStart() {
     static auto _profilerCallExt = client::host::register_sqf_command("callExtension", "Profiler redirect", callExtensionRedirect, game_data_type::STRING, game_data_type::STRING, game_data_type::STRING);
     static auto _profilerDiagLog = client::host::register_sqf_command("diag_log", "Profiler redirect", diag_logRedirect, game_data_type::NOTHING, game_data_type::ANY);
     static auto _profilerProfScript = client::host::register_sqf_command("profileScript", "Profiler redirect", profileScript, game_data_type::ARRAY, game_data_type::ARRAY);
-    static auto _profilerPrepFile = client::host::register_sqf_command("preprocessFile", "Profiler redirect", [](game_state&, game_value_parameter arg) -> game_value {
-        if (!profiler.preprocFileScope) {
-            static r_string compileEventText("preprocessFile");
-            static r_string profName("scriptProfiler.cpp");
-            profiler.preprocFileScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
-        }
+    if (!compHookDisabled) {
+        static auto _profilerPrepFile = client::host::register_sqf_command("preprocessFile", "Profiler redirect", [](game_state&, game_value_parameter arg) -> game_value {
+            if (!profiler.preprocFileScope) {
+                static r_string compileEventText("preprocessFile");
+                static r_string profName("scriptProfiler.cpp");
+                profiler.preprocFileScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
+            }
 
-        auto tempData = GProfilerAdapter->enterScope(profiler.preprocFileScope);
+            auto tempData = GProfilerAdapter->enterScope(profiler.preprocFileScope);
 
-        GProfilerAdapter->setName(tempData, "preprocessFile "+static_cast<r_string>(arg));
+            GProfilerAdapter->setName(tempData, "preprocessFile "+static_cast<r_string>(arg));
 
-        auto res = sqf::preprocess_file_line_numbers(arg);
+            auto res = sqf::preprocess_file_line_numbers(arg);
 
-        GProfilerAdapter->leaveScope(tempData);
+            GProfilerAdapter->leaveScope(tempData);
 
-        return res;
-    }, game_data_type::STRING, game_data_type::STRING);
-    static auto _profilerPrepFileLN = client::host::register_sqf_command("preprocessFileLineNumbers", "Profiler redirect", [](game_state&, game_value_parameter arg) -> game_value {
-        if (!profiler.preprocFileScope) {
-            static r_string compileEventText("preprocessFileLineNumbers");
-            static r_string profName("scriptProfiler.cpp");
-            profiler.preprocFileScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
-        }
+            return res;
+        }, game_data_type::STRING, game_data_type::STRING);
+        static auto _profilerPrepFileLN = client::host::register_sqf_command("preprocessFileLineNumbers", "Profiler redirect", [](game_state&, game_value_parameter arg) -> game_value {
+            if (!profiler.preprocFileScope) {
+                static r_string compileEventText("preprocessFileLineNumbers");
+                static r_string profName("scriptProfiler.cpp");
+                profiler.preprocFileScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
+            }
 
-        auto tempData = GProfilerAdapter->enterScope(profiler.preprocFileScope);
+            auto tempData = GProfilerAdapter->enterScope(profiler.preprocFileScope);
 
-        GProfilerAdapter->setName(tempData, "preprocessFile "+static_cast<r_string>(arg));
+            GProfilerAdapter->setName(tempData, "preprocessFile "+static_cast<r_string>(arg));
 
-        auto res = sqf::preprocess_file_line_numbers(arg);
+            auto res = sqf::preprocess_file_line_numbers(arg);
 
-        GProfilerAdapter->leaveScope(tempData);
+            GProfilerAdapter->leaveScope(tempData);
 
-        return res;
-    }, game_data_type::STRING, game_data_type::STRING);
-
+            return res;
+        }, game_data_type::STRING, game_data_type::STRING);
+    }
 #ifndef __linux__
     auto iface = client::host::request_plugin_interface("sqf_asm_devIf", 1);
     if (iface) {
@@ -1389,6 +1392,38 @@ public:
 
         return game_value(new GameDataProfileScope(std::move(data)));
     }
+
+    //v3
+    virtual void ASM_createScopeInstr(game_state& state, game_data_code* bodyCode) {
+        if (bodyCode->instructions.empty()) {
+            return;
+        }
+
+#ifdef WITH_BROFILER
+        if (auto brofilerData = std::dynamic_pointer_cast<ScopeTempStorageBrofiler>(tempData)) {
+            r_string src = getScriptFromFirstLine(bodyCode->instructions->front()->sdp, false);
+            brofilerData->evtDt->sourceCode = src;
+        }
+#endif
+
+        auto& funcPath = bodyCode->instructions.front()->sdp.sourcefile;
+
+        auto scriptName = tryGetNameFromInitFunctions(state);
+        if (!scriptName) scriptName = tryGetNameFromCBACompile(state);
+        if (!scriptName) scriptName = getScriptName(bodyCode->code_string, funcPath, 32);
+        //if (scriptName.empty()) scriptName = "<unknown>";
+
+        if (bodyCode->instructions.size() > 4 && scriptName && !scriptName->empty())// && scriptName != "<unknown>"
+            addScopeInstruction(bodyCode->instructions, *scriptName);
+
+        return;
+    }
+
+    virtual game_value compile(game_state& state, game_value_parameter code, bool final) {
+        if (final) return compileRedirectFinal(state, code);
+        return compileRedirect2(state, code);
+    }
+
 };
 
 static ArmaScriptProfiler_ProfInterface profIface;
@@ -1397,4 +1432,6 @@ static ArmaScriptProfiler_ProfInterface profIface;
 void scriptProfiler::registerInterfaces() {
     client::host::register_plugin_interface("ArmaScriptProfilerProfIFace"sv, 1, &profIface);
     client::host::register_plugin_interface("ArmaScriptProfilerProfIFace"sv, 2, &profIface);
+    if (!getCommandLineParam("-profilerNoInstrumentation"sv)) //Don't offer ourselves to ASM
+    client::host::register_plugin_interface("ArmaScriptProfilerProfIFace"sv, 3, &profIface);
 }

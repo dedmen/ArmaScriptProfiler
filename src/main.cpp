@@ -3,7 +3,7 @@
 
 
 int intercept::api_version() {
-    return 1;
+    return INTERCEPT_SDK_API_VERSION;
 }
 
 //bool __cdecl intercept::is_signed() {

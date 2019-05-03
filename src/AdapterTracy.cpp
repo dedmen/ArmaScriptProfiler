@@ -28,8 +28,8 @@ AdapterTracy::AdapterTracy() {
 
 AdapterTracy::~AdapterTracy() {
     tracy::s_profiler.RequestShutdown();
-    while (!tracy::s_profiler.HasShutdownFinished())
-        std::this_thread::sleep_for(5ms);
+    if (!tracy::s_profiler.HasShutdownFinished())
+        std::this_thread::sleep_for(5s); //If this doesn't cut it, then F you. HasShutdownFinished broke and never turned true so this is the fix now.
 }
 
 void AdapterTracy::perFrame() {
