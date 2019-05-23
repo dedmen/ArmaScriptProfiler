@@ -22,6 +22,7 @@
 
 using namespace intercept;
 using namespace std::chrono_literals;
+std::chrono::high_resolution_clock::time_point startTime;
 static sqf_script_type GameDataProfileScope_type;
 std::shared_ptr<ProfilerAdapter> GProfilerAdapter; //Needs to be above!! profiler
 scriptProfiler profiler{};
@@ -265,6 +266,34 @@ game_value profilerSetAdapter(game_state&, game_value_parameter file) {
 game_value profilerSetCounter(game_state&, game_value_parameter name, game_value_parameter value) {
     GProfilerAdapter->setCounter(name,value);
     return {};
+}
+
+game_value profilerTime(game_state&) {
+    //We want time to be as close as possible to when command returns, needs some tricks.
+
+    game_value result({0.0f, 0.0f, 0.0f});
+
+    auto& resultArr = result.to_array();
+
+    auto& fseconds = resultArr[0].get_as<game_data_number>()->number;
+    auto& fmicroseconds = resultArr[1].get_as<game_data_number>()->number;
+    auto& fnanoseconds = resultArr[2].get_as<game_data_number>()->number;
+
+    const auto elapsedTime = std::chrono::high_resolution_clock::now() - startTime;
+
+    const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(elapsedTime);
+    const auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(elapsedTime - seconds);
+    const auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            elapsedTime
+            - seconds
+            - microseconds
+        );
+
+    fseconds = seconds.count();
+    fmicroseconds = microseconds.count();
+    fnanoseconds = nanoseconds.count();
+
+    return result;
 }
 
 //profiles script like diag_codePerformance
@@ -776,7 +805,7 @@ std::optional<std::string> getCommandLineParam(std::string_view needle) {
 }
 
 scriptProfiler::scriptProfiler() {
-
+    startTime = std::chrono::high_resolution_clock::now();
 }
 #ifndef __linux__
 #pragma region Instructions
@@ -1179,6 +1208,9 @@ void scriptProfiler::preStart() {
     static auto _profilerSetOutputFile = client::host::register_sqf_command("profilerSetOutputFile", "Set's output file for ChromeAdapter", profilerSetOutputFile, game_data_type::NOTHING, game_data_type::STRING);
     static auto _profilerSetAdapter = client::host::register_sqf_command("profilerSetAdapter", "Set's profiler Adapter", profilerSetAdapter, game_data_type::NOTHING, game_data_type::STRING);
     static auto _profilerSetCounter = client::host::register_sqf_command("profilerSetCounter", "Set's a counter value", profilerSetCounter, game_data_type::NOTHING, game_data_type::STRING, game_data_type::SCALAR);
+    static auto _profilerTime = client::host::register_sqf_command("profilerTime", "Returns the time since gamestart as [seconds, microseconds, nanoseconds]"sv, profilerTime, game_data_type::ARRAY);
+
+
 
     auto compHookDisabled = client::host::request_plugin_interface("ProfilerNoCompile", 1); //ASM will call us via interface instead
 
