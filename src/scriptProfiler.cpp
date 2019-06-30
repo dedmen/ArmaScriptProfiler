@@ -753,6 +753,8 @@ game_value callExtensionRedirect(game_state&, game_value_parameter ext, game_val
 
     auto tempData = GProfilerAdapter->enterScope(profiler.callExtScope);
 
+    //GProfilerAdapter->setDescription(tempData, msg);
+
     auto res = sqf::call_extension(ext,msg);
 
 #ifdef WITH_BROFILER
