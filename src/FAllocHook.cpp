@@ -53,7 +53,7 @@ HookManager::Pattern pat_freeC{
 };
 
 void FAllocHook::init() {
-    
+#ifndef __linux__
     auto found = hooks.findPattern(pat_allocReg, 0x0);
 
 
@@ -81,5 +81,5 @@ void FAllocHook::init() {
     engineFree = hooks.placeHookTotalOffs(FreeF + 0x9, reinterpret_cast<uintptr_t>(engineFreeRedir));
     //
     //__debugbreak();
-
+#endif
 }
