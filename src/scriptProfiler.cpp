@@ -643,13 +643,8 @@ void addScopeInstruction(auto_array<ref<game_instruction>>& bodyCode, const r_st
         if (inst->value.type_enum() != game_data_type::CODE) continue;
 
         auto bodyCodeNext = static_cast<game_data_code*>(inst->value.data.get());
-        if (bodyCodeNext->instructions->size() > 20) {
-            auto_array<ref<game_instruction>> tmpArray(bodyCodeNext->instructions->begin(), bodyCodeNext->instructions->end());
-
-            addScopeInstruction(tmpArray, scriptName);
-
-            bodyCodeNext->instructions = compact_array<ref<game_instruction>>::create(tmpArray.begin(), tmpArray.end());
-        }
+        if (bodyCodeNext->instructions.size() > 20)
+           addScopeInstruction(bodyCodeNext->instructions, scriptName);
     }
 }
 
@@ -683,7 +678,7 @@ game_value compileRedirect2(game_state& state, game_value_parameter message) {
 
     auto comp = sqf::compile(str);
     auto bodyCode = static_cast<game_data_code*>(comp.data.get());
-    if (!bodyCode->instructions || bodyCode->instructions->size() == 0) {
+    if (bodyCode->instructions.empty()) {
         GProfilerAdapter->leaveScope(tempData);
         return comp;
     }
@@ -697,19 +692,14 @@ game_value compileRedirect2(game_state& state, game_value_parameter message) {
 
     GProfilerAdapter->leaveScope(tempData);
 
-    auto& funcPath = bodyCode->instructions->front()->sdp.sourcefile;
+    auto& funcPath = bodyCode->instructions.front()->sdp.sourcefile;
     //#TODO pass instructions to getScriptName and check if there is a "scriptName" or "scopeName" unary command call
     r_string scriptName(getScriptName(str, funcPath, 32));
 
     //if (scriptName.empty()) scriptName = "<unknown>";
 
-    if (bodyCode->instructions->size() > 4 && !scriptName.empty()) {// && scriptName != "<unknown>"
-        auto_array<ref<game_instruction>> tmpArray(bodyCode->instructions->begin(), bodyCode->instructions->end());
-
-        addScopeInstruction(tmpArray, scriptName);
-
-        bodyCode->instructions = compact_array<ref<game_instruction>>::create(tmpArray.begin(), tmpArray.end());
-    }
+    if (bodyCode->instructions.size() > 4 && !scriptName.empty())// && scriptName != "<unknown>"
+        addScopeInstruction(bodyCode->instructions, scriptName);
 
     return comp;
 }
@@ -727,7 +717,7 @@ game_value compileRedirectFinal(game_state& state, game_value_parameter message)
 
     auto comp = sqf::compile_final(str);
     auto bodyCode = static_cast<game_data_code*>(comp.data.get());
-    if (!bodyCode->instructions || bodyCode->instructions->size() == 0) {
+    if (bodyCode->instructions.empty()) {
         GProfilerAdapter->leaveScope(tempData);
         return comp;
     }
@@ -741,20 +731,15 @@ game_value compileRedirectFinal(game_state& state, game_value_parameter message)
 
     GProfilerAdapter->leaveScope(tempData);
 
-    auto& funcPath = bodyCode->instructions->front()->sdp.sourcefile;
+    auto& funcPath = bodyCode->instructions.front()->sdp.sourcefile;
 
     auto scriptName = tryGetNameFromInitFunctions(state);
     if (!scriptName) scriptName = tryGetNameFromCBACompile(state);
     if (!scriptName) scriptName = getScriptName(str, funcPath, 32);
     //if (scriptName.empty()) scriptName = "<unknown>";
 
-    if (bodyCode->instructions->size() > 4 && scriptName && !scriptName->empty()) {// && scriptName != "<unknown>"
-        auto_array<ref<game_instruction>> tmpArray(bodyCode->instructions->begin(), bodyCode->instructions->end());
-
-        addScopeInstruction(tmpArray, *scriptName);
-
-        bodyCode->instructions = compact_array<ref<game_instruction>>::create(tmpArray.begin(), tmpArray.end());
-    }
+    if (bodyCode->instructions.size() > 4 && scriptName && !scriptName->empty())// && scriptName != "<unknown>"
+        addScopeInstruction(bodyCode->instructions, *scriptName);
 
     return comp;
 }
@@ -1444,7 +1429,7 @@ public:
 
     //v3
     virtual void ASM_createScopeInstr(game_state& state, game_data_code* bodyCode) {
-        if (bodyCode->instructions->size() == 0) {
+        if (bodyCode->instructions.empty()) {
             return;
         }
 
@@ -1455,20 +1440,16 @@ public:
         }
 #endif
 
-        auto& funcPath = bodyCode->instructions->front()->sdp.sourcefile;
+        auto& funcPath = bodyCode->instructions.front()->sdp.sourcefile;
 
         auto scriptName = tryGetNameFromInitFunctions(state);
         if (!scriptName) scriptName = tryGetNameFromCBACompile(state);
         if (!scriptName) scriptName = getScriptName(bodyCode->code_string, funcPath, 32);
         //if (scriptName.empty()) scriptName = "<unknown>";
 
-        if (bodyCode->instructions->size() > 4 && scriptName && !scriptName->empty()) {// && scriptName != "<unknown>"
-            auto_array<ref<game_instruction>> tmpArray(bodyCode->instructions->begin(), bodyCode->instructions->end());
+        if (bodyCode->instructions.size() > 4 && scriptName && !scriptName->empty())// && scriptName != "<unknown>"
+            addScopeInstruction(bodyCode->instructions, *scriptName);
 
-            addScopeInstruction(tmpArray, *scriptName);
-
-            bodyCode->instructions = compact_array<ref<game_instruction>>::create(tmpArray.begin(), tmpArray.end());
-        }
         return;
     }
 
