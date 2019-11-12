@@ -1,11 +1,6 @@
 [submodule "intercept"]
 	path = intercept
 	url = https://github.com/intercept/intercept.git
-[submodule "brofiler"]
-	
-	path = brofiler
-	
-	url = https://github.com/dedmen/brofiler.git
 [submodule "tracy"]
 	path = tracy
 	url = https://bitbucket.org/dedmenmiller/tracy.git

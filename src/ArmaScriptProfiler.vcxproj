@@ -157,14 +157,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\brofiler\BrofilerCore\Brofiler.h" />
-    <ClInclude Include="..\brofiler\BrofilerCore\Common.h" />
-    <ClInclude Include="..\brofiler\BrofilerCore\Core.h" />
-    <ClInclude Include="..\brofiler\BrofilerCore\Event.h" />
-    <ClInclude Include="..\brofiler\BrofilerCore\EventDescriptionBoard.h" />
-    <ClInclude Include="..\brofiler\BrofilerCore\Message.h" />
-    <ClInclude Include="..\brofiler\BrofilerCore\ProfilerServer.h" />
-    <ClInclude Include="..\brofiler\BrofilerCore\ThreadID.h" />
     <ClInclude Include="AdapterArmaDiag.hpp" />
     <ClInclude Include="AdapterBrofiler.hpp" />
     <ClInclude Include="AdapterChrome.hpp" />
@@ -177,30 +169,6 @@
     <ClInclude Include="SignalSlot.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\brofiler\BrofilerCore\CallstackCollector.cpp" />
-    <ClCompile Include="..\brofiler\BrofilerCore\CityHash.cpp" />
-    <ClCompile Include="..\brofiler\BrofilerCore\Core.cpp">
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)brofilercore.obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)brofilercore.obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)brofilercore.obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)brofilercore.obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\brofiler\BrofilerCore\Event.cpp" />
-    <ClCompile Include="..\brofiler\BrofilerCore\EventDescriptionBoard.cpp" />
-    <ClCompile Include="..\brofiler\BrofilerCore\Memory.cpp" />
-    <ClCompile Include="..\brofiler\BrofilerCore\Message.cpp" />
-    <ClCompile Include="..\brofiler\BrofilerCore\Platform\SchedulerTrace.cpp" />
-    <ClCompile Include="..\brofiler\BrofilerCore\Platform\SymbolEngine.cpp" />
-    <ClCompile Include="..\brofiler\BrofilerCore\Platform\Windows\EtwTracer.cpp" />
-    <ClCompile Include="..\brofiler\BrofilerCore\Platform\Windows\SymEngine.cpp" />
-    <ClCompile Include="..\brofiler\BrofilerCore\ProfilerServer.cpp" />
-    <ClCompile Include="..\brofiler\BrofilerCore\Serialization.cpp" />
-    <ClCompile Include="..\brofiler\BrofilerCore\SwitchContextCollector.cpp" />
-    <ClCompile Include="..\brofiler\BrofilerCore\SysCallCollector.cpp" />
-    <ClCompile Include="..\brofiler\ThirdParty\TaskScheduler\Scheduler\Source\MTDefaultAppInterop.cpp" />
-    <ClCompile Include="..\brofiler\ThirdParty\TaskScheduler\Scheduler\Source\MTFiberContext.cpp" />
-    <ClCompile Include="..\brofiler\ThirdParty\TaskScheduler\Scheduler\Source\MTScheduler.cpp" />
-    <ClCompile Include="..\brofiler\ThirdParty\TaskScheduler\Scheduler\Source\MTThreadContext.cpp" />
     <ClCompile Include="..\intercept\src\client\intercept\client\client.cpp" />
     <ClCompile Include="..\intercept\src\client\intercept\client\eventhandlers.cpp" />
     <ClCompile Include="..\intercept\src\client\intercept\client\pointers.cpp" />
