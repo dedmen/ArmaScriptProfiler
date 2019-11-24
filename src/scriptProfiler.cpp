@@ -1292,7 +1292,7 @@ void scriptProfiler::preStart() {
         }, game_data_type::STRING, game_data_type::STRING);
     }
 
-    if (getCommandLineParam("-profilerNetwork"sv)) {
+    if (getCommandLineParam("-profilerEnableNetwork"sv)) {
         if (std::dynamic_pointer_cast<AdapterTracy>(GProfilerAdapter)) {
             diag_log("ASP: Network statistics enabled"sv);
             GNetworkProfiler.init();

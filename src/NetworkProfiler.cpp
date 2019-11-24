@@ -17,7 +17,7 @@ public:
     uint64_t* sizeCounter;
     ClassEntrySizeCounter* parent = nullptr;
     std::vector<ClassEntrySizeCounter*> activeSubs;
-    std::string* data;
+    std::string* data = nullptr;
 
     ClassEntrySizeCounter(r_string name_, uint64_t* size) : sizeCounter(size) {
         *sizeCounter += name_.length();
@@ -34,6 +34,10 @@ public:
     ClassEntrySizeCounter(r_string name_, ClassEntrySizeCounter* parent_) : sizeCounter(parent_->sizeCounter), parent(parent_), data(parent_->data) {
         *sizeCounter += name_.length();
         parent->activeSubs.push_back(this);
+        if (data) {
+            *data += name_;
+            data->push_back('/');
+        }
     };
 
     //! virtual destructor
@@ -178,10 +182,9 @@ public:
 void NetworkProfiler::init() {
     auto iface = client::host::request_plugin_interface("BIDebugEngine_getCallstack", 1);
     if (!iface) {
-        diag_log("ASP: Network statistics failed to enable because ArmaDebugEngine is missing"sv);
-        return;
-    }
-    getCallstackRaw = reinterpret_cast<decltype(getCallstackRaw)>(*iface);
+        diag_log("ASP: Network statistics ArmaDebugEngine not present, you won't get callstacks"sv);
+    } else
+        getCallstackRaw = reinterpret_cast<decltype(getCallstackRaw)>(*iface);
 
     static auto _pubVar = client::host::register_sqf_command("publicVariable", "Profiler redirect", [](game_state& gs, game_value_parameter arg) -> game_value {
         static tracy::SourceLocationData info {
@@ -191,7 +194,8 @@ void NetworkProfiler::init() {
             0
         };
         static int64_t publicVarSize;
-        auto callstack = NetworkProfiler::getCallstackRaw(&gs);
+        auto_array<std::pair<r_string, uint32_t>> callstack;
+        if (getCallstackRaw) callstack = getCallstackRaw(&gs);
 
         r_string varName = arg;
         auto varValue = sqf::get_variable(sqf::current_namespace(), varName);
@@ -200,8 +204,8 @@ void NetworkProfiler::init() {
         publicVarSize += getVariableSize(varValue, logPacketContent ? &data : nullptr);
         publicVarSize += varName.size();
 
-        tracy::ScopedZone zone(&info, tracy::t_withCallstack{});
-        AdapterTracy::sendCallstack(callstack);
+        tracy::ScopedZone zone(&info, tracy::t_withCallstack{ getCallstackRaw != nullptr });
+        if (getCallstackRaw) AdapterTracy::sendCallstack(callstack);
         if (logPacketContent)
             zone.Text(data.c_str(), data.size());
         else
@@ -222,7 +226,8 @@ void NetworkProfiler::init() {
             0
         };
         static int64_t publicVarSize;
-        auto callstack = NetworkProfiler::getCallstackRaw(&gs);
+        auto_array<std::pair<r_string, uint32_t>> callstack;
+        if (getCallstackRaw) callstack = getCallstackRaw(&gs);
 
         r_string varName = arg;
         auto varValue = sqf::get_variable(sqf::current_namespace(), varName);
@@ -232,8 +237,8 @@ void NetworkProfiler::init() {
         publicVarSize += varName.size();
         publicVarSize += 4; //clientID
 
-        tracy::ScopedZone zone(&info, tracy::t_withCallstack{});
-        AdapterTracy::sendCallstack(callstack);
+        tracy::ScopedZone zone(&info, tracy::t_withCallstack{ getCallstackRaw != nullptr });
+        if (getCallstackRaw) AdapterTracy::sendCallstack(callstack);
         if (logPacketContent)
             zone.Text(data.c_str(), data.size());
         else
@@ -254,7 +259,8 @@ void NetworkProfiler::init() {
             0
         };
         static int64_t publicVarSize;
-        auto callstack = NetworkProfiler::getCallstackRaw(&gs);
+        auto_array<std::pair<r_string, uint32_t>> callstack;
+        if (getCallstackRaw) callstack = getCallstackRaw(&gs);
 
         r_string varName = arg;
         auto varValue = sqf::get_variable(sqf::current_namespace(), varName);
@@ -263,8 +269,8 @@ void NetworkProfiler::init() {
         publicVarSize += getVariableSize(varValue, logPacketContent ? &data : nullptr);
         publicVarSize += varName.size();
 
-        tracy::ScopedZone zone(&info, tracy::t_withCallstack{});
-        AdapterTracy::sendCallstack(callstack);
+        tracy::ScopedZone zone(&info, tracy::t_withCallstack{ getCallstackRaw != nullptr });
+        if (getCallstackRaw) AdapterTracy::sendCallstack(callstack);
         if (logPacketContent)
             zone.Text(data.c_str(), data.size());
         else
@@ -284,15 +290,16 @@ void NetworkProfiler::init() {
             "",
             0
         };
-        auto callstack = NetworkProfiler::getCallstackRaw(&gs);
+        auto_array<std::pair<r_string, uint32_t>> callstack;
+        if (getCallstackRaw) callstack = getCallstackRaw(&gs);
 
         std::string data;
         remoteExecSize += getVariableSize(arg, logPacketContent ? &data : nullptr);
 
         r_string name = arg[0];
 
-        tracy::ScopedZone zone(&info, tracy::t_withCallstack{});
-        AdapterTracy::sendCallstack(callstack);
+        tracy::ScopedZone zone(&info, tracy::t_withCallstack{ getCallstackRaw != nullptr });
+        if (getCallstackRaw) AdapterTracy::sendCallstack(callstack);
         if (logPacketContent)
             zone.Text(data.c_str(), data.size());
         else
@@ -310,7 +317,8 @@ void NetworkProfiler::init() {
             "",
             0
         };
-        auto callstack = NetworkProfiler::getCallstackRaw(&gs);
+        auto_array<std::pair<r_string, uint32_t>> callstack;
+        if (getCallstackRaw) callstack = getCallstackRaw(&gs);
 
         std::string data;
         remoteExecSize += getVariableSize(par, logPacketContent ? &data : nullptr);
@@ -318,8 +326,8 @@ void NetworkProfiler::init() {
 
         r_string name = arg[0];
 
-        tracy::ScopedZone zone(&info, tracy::t_withCallstack{});
-        AdapterTracy::sendCallstack(callstack);
+        tracy::ScopedZone zone(&info, tracy::t_withCallstack{ getCallstackRaw != nullptr });
+        if (getCallstackRaw) AdapterTracy::sendCallstack(callstack);
         if (logPacketContent)
             zone.Text(data.c_str(), data.size());
         else
@@ -336,15 +344,16 @@ void NetworkProfiler::init() {
             "",
             0
         };
-        auto callstack = NetworkProfiler::getCallstackRaw(&gs);
+        auto_array<std::pair<r_string, uint32_t>> callstack;
+        if (getCallstackRaw) callstack = getCallstackRaw(&gs);
 
         std::string data;
         remoteExecSize += getVariableSize(arg, logPacketContent ? &data : nullptr);
 
         r_string name = arg[0];
 
-        tracy::ScopedZone zone(&info, tracy::t_withCallstack{});
-        AdapterTracy::sendCallstack(callstack);
+        tracy::ScopedZone zone(&info, tracy::t_withCallstack{ getCallstackRaw != nullptr });
+        if (getCallstackRaw) AdapterTracy::sendCallstack(callstack);
         if (logPacketContent)
             zone.Text(data.c_str(), data.size());
         else
@@ -363,7 +372,8 @@ void NetworkProfiler::init() {
             0
         };
 
-        auto callstack = NetworkProfiler::getCallstackRaw(&gs);
+        auto_array<std::pair<r_string, uint32_t>> callstack;
+        if (getCallstackRaw) callstack = getCallstackRaw(&gs);
 
         std::string data;
         remoteExecSize += getVariableSize(par, logPacketContent ? &data : nullptr);
@@ -371,8 +381,8 @@ void NetworkProfiler::init() {
 
         r_string name = arg[0];
 
-        tracy::ScopedZone zone(&info, tracy::t_withCallstack{});
-        AdapterTracy::sendCallstack(callstack);
+        tracy::ScopedZone zone(&info, tracy::t_withCallstack{ getCallstackRaw != nullptr });
+        if (getCallstackRaw) AdapterTracy::sendCallstack(callstack);
         if (logPacketContent)
             zone.Text(data.c_str(), data.size());
         else
@@ -393,7 +403,8 @@ void NetworkProfiler::init() {
         if (arg.size() != 3 || arg[2].type_enum() != game_data_type::BOOL || !static_cast<bool>(arg[2]))
             return host::functions.invoke_raw_binary(__sqf::binary__setvariable__object__array__ret__nothing, par, arg);
 
-        auto callstack = NetworkProfiler::getCallstackRaw(&gs);
+        auto_array<std::pair<r_string, uint32_t>> callstack;
+        if (getCallstackRaw) callstack = getCallstackRaw(&gs);
 
         std::string data;
         setVariableSize += getVariableSize(par, logPacketContent ? &data : nullptr);
@@ -401,8 +412,8 @@ void NetworkProfiler::init() {
 
         r_string name = arg[0];
 
-        tracy::ScopedZone zone(&info, tracy::t_withCallstack{});
-        AdapterTracy::sendCallstack(callstack);
+        tracy::ScopedZone zone(&info, tracy::t_withCallstack{ getCallstackRaw != nullptr });
+        if (getCallstackRaw) AdapterTracy::sendCallstack(callstack);
         if (logPacketContent)
             zone.Text(data.c_str(), data.size());
         else
@@ -423,7 +434,8 @@ void NetworkProfiler::init() {
         if (arg.size() != 3 || arg[2].type_enum() != game_data_type::BOOL || !static_cast<bool>(arg[2]))
             return host::functions.invoke_raw_binary(__sqf::binary__setvariable__namespace__array__ret__nothing, par, arg);
 
-        auto callstack = NetworkProfiler::getCallstackRaw(&gs);
+        auto_array<std::pair<r_string, uint32_t>> callstack;
+        if (getCallstackRaw) callstack = getCallstackRaw(&gs);
 
         std::string data;
         setVariableSize += getVariableSize(par, logPacketContent ? &data : nullptr);
@@ -431,8 +443,8 @@ void NetworkProfiler::init() {
 
         r_string name = arg[0];
 
-        tracy::ScopedZone zone(&info, tracy::t_withCallstack{});
-        AdapterTracy::sendCallstack(callstack);
+        tracy::ScopedZone zone(&info, tracy::t_withCallstack{ getCallstackRaw != nullptr });
+        if (getCallstackRaw) AdapterTracy::sendCallstack(callstack);
         if (logPacketContent)
             zone.Text(data.c_str(), data.size());
         else
@@ -453,7 +465,8 @@ void NetworkProfiler::init() {
         if (arg.size() != 3 || arg[2].type_enum() != game_data_type::BOOL || !static_cast<bool>(arg[2]))
             return host::functions.invoke_raw_binary(__sqf::binary__setvariable__location__array__ret__nothing, par, arg);
 
-        auto callstack = NetworkProfiler::getCallstackRaw(&gs);
+        auto_array<std::pair<r_string, uint32_t>> callstack;
+        if (getCallstackRaw) callstack = getCallstackRaw(&gs);
 
         std::string data;
         setVariableSize += getVariableSize(par, logPacketContent ? &data : nullptr);
@@ -461,8 +474,8 @@ void NetworkProfiler::init() {
 
         r_string name = arg[0];
 
-        tracy::ScopedZone zone(&info, tracy::t_withCallstack{});
-        AdapterTracy::sendCallstack(callstack);
+        tracy::ScopedZone zone(&info, tracy::t_withCallstack{ getCallstackRaw != nullptr });
+        if (getCallstackRaw) AdapterTracy::sendCallstack(callstack);
         if (logPacketContent)
             zone.Text(data.c_str(), data.size());
         else
@@ -483,7 +496,8 @@ void NetworkProfiler::init() {
         if (arg.size() != 3 || arg[2].type_enum() != game_data_type::BOOL || !static_cast<bool>(arg[2]))
             return host::functions.invoke_raw_binary(__sqf::binary__setvariable__group__array__ret__nothing, par, arg);
 
-        auto callstack = NetworkProfiler::getCallstackRaw(&gs);
+        auto_array<std::pair<r_string, uint32_t>> callstack;
+        if (getCallstackRaw) callstack = getCallstackRaw(&gs);
 
         std::string data;
         setVariableSize += getVariableSize(par, logPacketContent ? &data : nullptr);
@@ -491,8 +505,8 @@ void NetworkProfiler::init() {
 
         r_string name = arg[0];
 
-        tracy::ScopedZone zone(&info, tracy::t_withCallstack{});
-        AdapterTracy::sendCallstack(callstack);
+        tracy::ScopedZone zone(&info, tracy::t_withCallstack{ getCallstackRaw != nullptr });
+        if (getCallstackRaw) AdapterTracy::sendCallstack(callstack);
         if (logPacketContent)
             zone.Text(data.c_str(), data.size());
         else
@@ -506,15 +520,10 @@ void NetworkProfiler::init() {
 uint32_t NetworkProfiler::getVariableSize(const game_value& var, std::string* data) {
     auto ncnst = const_cast<game_value&>(var);
     uint64_t size = 0;
-    if (data) {
-        param_archive ar(rv_allocator<ClassEntrySizeCounter>::create_single(""sv, &size, data));
 
-        (&ncnst)->serialize(ar);
-    } else {
-        param_archive ar(rv_allocator<ClassEntrySizeCounter>::create_single(""sv, &size));
+    param_archive ar(rv_allocator<ClassEntrySizeCounter>::create_single(""sv, &size, data));
 
-        (&ncnst)->serialize(ar);
-    }
+    (&ncnst)->serialize(ar);
 
     return size;
 }
