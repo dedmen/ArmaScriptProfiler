@@ -771,6 +771,34 @@ game_value callExtensionRedirect(game_state&, game_value_parameter ext, game_val
     return res;
 }
 
+game_value callExtensionArgsRedirect(game_state&, game_value_parameter ext, game_value_parameter msg) {
+    if (!profiler.callExtScope) {
+        static r_string compileEventText("callExtension");
+        static r_string profName("scriptProfiler.cpp");
+        profiler.callExtScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
+    }
+
+    auto tempData = GProfilerAdapter->enterScope(profiler.callExtScope);
+
+    //GProfilerAdapter->setDescription(tempData, msg);
+
+    auto res = host::functions.invoke_raw_binary(__sqf::binary__callextension__string__array__ret__array, ext, msg);
+
+
+#ifdef WITH_BROFILER
+    if (auto brofilerData = std::dynamic_pointer_cast<ScopeTempStorageBrofiler>(tempData)) {
+        brofilerData->evtDt->thisArgs = ext;
+        brofilerData->evtDt->sourceCode = msg;
+    }
+#endif
+
+    GProfilerAdapter->leaveScope(tempData);
+
+    return res;
+}
+
+
+
 game_value diag_logRedirect(game_state&, game_value_parameter msg) {
     r_string str = static_cast<r_string>(msg);
 
@@ -1224,6 +1252,7 @@ void scriptProfiler::preStart() {
         static auto _profilerCompileF = client::host::register_sqf_command("compileFinal", "Profiler redirect", compileRedirectFinal, game_data_type::CODE, game_data_type::STRING);
     };
     static auto _profilerCallExt = client::host::register_sqf_command("callExtension", "Profiler redirect", callExtensionRedirect, game_data_type::STRING, game_data_type::STRING, game_data_type::STRING);
+    static auto _profilerCallExtArgs = client::host::register_sqf_command("callExtension", "Profiler redirect", callExtensionArgsRedirect, game_data_type::STRING, game_data_type::STRING, game_data_type::ARRAY);
     static auto _profilerDiagLog = client::host::register_sqf_command("diag_log", "Profiler redirect", diag_logRedirect, game_data_type::NOTHING, game_data_type::ANY);
     static auto _profilerProfScript = client::host::register_sqf_command("profileScript", "Profiler redirect", profileScript, game_data_type::ARRAY, game_data_type::ARRAY);
     if (!compHookDisabled) {
