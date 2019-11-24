@@ -24,6 +24,7 @@ public:
 	std::shared_ptr<ScopeInfo> createScopeStatic(const char* name, const char* filename, uint32_t fileline) const;
 	static bool isConnected();
 
+	static void sendCallstack(intercept::types::auto_array<std::pair<intercept::types::r_string, uint32_t>>& cs);
 private:
 	static void ensureReady();
 	using scopeCacheKey = std::tuple<intercept::types::r_string, intercept::types::r_string,uint32_t>;

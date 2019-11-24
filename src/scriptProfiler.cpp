@@ -18,13 +18,15 @@
 #include "AdapterTracy.hpp"
 #include <memory>
 #include <string>
+#include "NetworkProfiler.hpp"
+#include <pointers.hpp>
 
 
 using namespace intercept;
 using namespace std::chrono_literals;
 std::chrono::high_resolution_clock::time_point startTime;
 static sqf_script_type GameDataProfileScope_type;
-std::shared_ptr<ProfilerAdapter> GProfilerAdapter; //Needs to be above!! profiler
+
 scriptProfiler profiler{};
 bool instructionLevelProfiling = false;
 
@@ -1153,8 +1155,7 @@ void scriptProfiler::preStart() {
             GProfilerAdapter = std::make_shared<AdapterTracy>();
             sqf::diag_log("ASP: Selected Tracy Adapter"sv);
         }
-    }
-    else {
+    } else {
         GProfilerAdapter = std::make_shared<AdapterTracy>();
         sqf::diag_log("ASP: Selected Tracy Adapter"sv);
     }
@@ -1261,6 +1262,19 @@ void scriptProfiler::preStart() {
             return res;
         }, game_data_type::STRING, game_data_type::STRING);
     }
+
+    if (getCommandLineParam("-profilerNetwork"sv)) {
+        if (std::dynamic_pointer_cast<AdapterTracy>(GProfilerAdapter)) {
+            diag_log("ASP: Network statistics enabled"sv);
+            GNetworkProfiler.init();
+        } else {
+            diag_log("ASP: Network statistics could NOT be enabled because it requires Tracy mode"sv);
+        }
+        
+    }
+
+
+
 #ifndef __linux__
     auto iface = client::host::request_plugin_interface("sqf_asm_devIf", 1);
     if (iface) {

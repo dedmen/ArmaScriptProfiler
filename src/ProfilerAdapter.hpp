@@ -51,3 +51,5 @@ protected:
     bool omitFilePaths = false;
     AdapterType type = AdapterType::invalid;
 };
+
+static inline std::shared_ptr<ProfilerAdapter> GProfilerAdapter;

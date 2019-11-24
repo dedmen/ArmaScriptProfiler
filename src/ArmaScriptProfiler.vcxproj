@@ -164,6 +164,7 @@
     <ClInclude Include="EngineProfiling.h" />
     <ClInclude Include="FAllocHook.h" />
     <ClInclude Include="HookManager.hpp" />
+    <ClInclude Include="NetworkProfiler.hpp" />
     <ClInclude Include="ProfilerAdapter.hpp" />
     <ClInclude Include="scriptProfiler.hpp" />
     <ClInclude Include="SignalSlot.hpp" />
@@ -218,6 +219,7 @@
     <ClCompile Include="FAllocHook.cpp" />
     <ClCompile Include="HookManager.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="NetworkProfiler.cpp" />
     <ClCompile Include="scriptProfiler.cpp" />
   </ItemGroup>
   <ItemGroup>

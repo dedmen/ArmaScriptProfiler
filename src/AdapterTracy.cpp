@@ -18,7 +18,7 @@ class ScopeTempStorageTracy final : public ScopeTempStorage {
 public:
 
     ScopeTempStorageTracy(const tracy::SourceLocationData* srcloc) : zone(srcloc) {}
-    ScopeTempStorageTracy(const tracy::SourceLocationData* srcloc, uint64_t threadID) : zone(srcloc, threadID) {}
+    //ScopeTempStorageTracy(const tracy::SourceLocationData* srcloc, uint64_t threadID) : zone(srcloc, threadID) {}
     tracy::ScopedZone zone;
 };
 
@@ -63,12 +63,13 @@ std::shared_ptr<ScopeTempStorage> AdapterTracy::enterScope(std::shared_ptr<Scope
 }
 
 std::shared_ptr<ScopeTempStorage> AdapterTracy::enterScope(std::shared_ptr<ScopeInfo> scope, uint64_t threadID) {
-    auto info = std::dynamic_pointer_cast<ScopeInfoTracy>(scope);
-    if (!info || !isConnected()) return nullptr; //#TODO debugbreak? log error?
-    ensureReady();
-
-    auto ret = std::make_shared<ScopeTempStorageTracy>(&info->info, threadID);
-    return ret;
+    return enterScope(scope);
+    //auto info = std::dynamic_pointer_cast<ScopeInfoTracy>(scope);
+    //if (!info || !isConnected()) return nullptr; //#TODO debugbreak? log error?
+    //ensureReady();
+    //
+    //auto ret = std::make_shared<ScopeTempStorageTracy>(&info->info, threadID);
+    //return ret;
 }
 
 void AdapterTracy::leaveScope(std::shared_ptr<ScopeTempStorage> tempStorage) {
@@ -112,6 +113,70 @@ std::shared_ptr<ScopeInfo> AdapterTracy::createScopeStatic(const char* name, con
 
 bool AdapterTracy::isConnected() {
     return tracy::s_profiler.IsConnected();
+}
+
+
+struct CallstackStruct {
+    intercept::types::auto_array<std::pair<intercept::types::r_string, uint32_t>> data;
+};
+
+void DestructCallstackStruct(void* data) {
+    auto str = (CallstackStruct*)data;
+
+    str->data.clear();
+    delete str;
+}
+
+void AdapterTracy::sendCallstack(intercept::types::auto_array<std::pair<intercept::types::r_string, uint32_t>>& cs) {
+    if (cs.size() > 63)
+        cs.resize(63);
+
+    uint32_t depth = cs.size();
+
+    const char* func[64];
+    uint32_t fsz[64];
+    uint32_t ssz[64];
+    uint32_t spaceNeeded = 4;     // cnt
+
+    uint32_t cnt = 0;
+    for (auto& [file, line] : cs) {
+        func[cnt] = file.c_str();
+        fsz[cnt] = uint32_t(strlen(func[cnt]));
+        ssz[cnt] = uint32_t(file.length());
+        spaceNeeded += fsz[cnt] + ssz[cnt];
+        cnt++;
+    }
+
+    spaceNeeded += cnt * (4 + 4 + 4);     // source line, function string length, source string length
+
+    auto ptr = (char*)tracy::tracy_malloc(spaceNeeded + 4);
+    auto dst = ptr;
+    memcpy(dst, &spaceNeeded, 4); dst += 4;
+    memcpy(dst, &cnt, 4); dst += 4;
+
+
+    cnt = 0;
+    for (auto& [file, line] : cs) {
+        memcpy(dst, &line, 4); dst += 4;
+        memcpy(dst, fsz + cnt, 4); dst += 4;
+        memcpy(dst, func[cnt], fsz[cnt]); dst += fsz[cnt];
+        memcpy(dst, ssz + cnt, 4); dst += 4;
+        memcpy(dst, file.c_str(), ssz[cnt]), dst += ssz[cnt];
+        cnt++;
+    }
+    assert(dst - ptr == spaceNeeded + 4);
+
+    tracy::Magic magic;
+    auto token = tracy::GetToken();
+    auto& tail = token->get_tail_index();
+    auto item = token->enqueue_begin(magic);
+    tracy::MemWrite(&item->hdr.type, tracy::QueueType::CallstackArma);
+    tracy::MemWrite(&item->callstackAlloc.ptr, (uint64_t)ptr);
+    auto str = new CallstackStruct();
+    str->data = cs;
+    tracy::MemWrite(&item->callstackAlloc.nativePtr, (uint64_t)str);
+    tail.store(magic + 1, std::memory_order_release);
+
 }
 
 void AdapterTracy::ensureReady() {

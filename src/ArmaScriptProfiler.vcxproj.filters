@@ -60,6 +60,9 @@
     <ClInclude Include="FAllocHook.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="NetworkProfiler.hpp">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="scriptProfiler.cpp">
@@ -192,6 +195,9 @@
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="FAllocHook.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkProfiler.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
