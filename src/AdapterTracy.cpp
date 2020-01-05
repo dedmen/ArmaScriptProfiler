@@ -18,12 +18,45 @@ class ScopeTempStorageTracy final : public ScopeTempStorage {
 public:
 
     ScopeTempStorageTracy(const tracy::SourceLocationData* srcloc) : zone(srcloc) {}
+    ScopeTempStorageTracy(const tracy::SourceLocationData* srcloc, tracy::t_withCallstack cs) : zone(srcloc, cs) {}
     //ScopeTempStorageTracy(const tracy::SourceLocationData* srcloc, uint64_t threadID) : zone(srcloc, threadID) {}
     tracy::ScopedZone zone;
 };
 
+extern bool NetworkProfilerCallstack;
+extern bool EngineProfilingEnabled;
+extern bool instructionLevelProfiling;
+extern bool InstructionCallstack;
+extern bool logPacketContent;
+
+void TracyParameterUpdated(uint32_t idx, int32_t val) {
+    switch (idx) {
+        case TP_OmitFilePath:
+            GProfilerAdapter->setOmitFilePaths(val != 0);
+            break;
+        case TP_NetworkProfilerCallstack:
+            NetworkProfilerCallstack = val != 0;
+            break;
+        case TP_NetworkProfilerLogPacketContent:
+            logPacketContent = val != 0;
+            break;
+        case TP_EngineProfilingEnabled:
+            EngineProfilingEnabled = val != 0;
+            break;
+        case TP_InstructionProfilingEnabled:
+            instructionLevelProfiling = val != 0;
+            break;
+        case TP_InstructionGetVarCallstackEnabled:
+            InstructionCallstack = val != 0;
+            break;
+    }
+
+}
+
 AdapterTracy::AdapterTracy() {
     type = AdapterType::Tracy;
+
+    TracyParameterRegister(TracyParameterUpdated);
 }
 
 AdapterTracy::~AdapterTracy() {
@@ -70,6 +103,15 @@ std::shared_ptr<ScopeTempStorage> AdapterTracy::enterScope(std::shared_ptr<Scope
     //
     //auto ret = std::make_shared<ScopeTempStorageTracy>(&info->info, threadID);
     //return ret;
+}
+
+std::shared_ptr<ScopeTempStorage> AdapterTracy::enterScope(std::shared_ptr<ScopeInfo> scope, ScopeWithCallstack cs) {
+    auto info = std::dynamic_pointer_cast<ScopeInfoTracy>(scope);
+    if (!info || !isConnected()) return nullptr; //#TODO debugbreak? log error?
+    ensureReady();
+
+    auto ret = std::make_shared<ScopeTempStorageTracy>(&info->info, tracy::t_withCallstack{cs.enabled});
+    return ret;
 }
 
 void AdapterTracy::leaveScope(std::shared_ptr<ScopeTempStorage> tempStorage) {
@@ -177,6 +219,10 @@ void AdapterTracy::sendCallstack(intercept::types::auto_array<std::pair<intercep
     tracy::MemWrite(&item->callstackAlloc.nativePtr, (uint64_t)str);
     tail.store(magic + 1, std::memory_order_release);
 
+}
+
+void AdapterTracy::addParameter(uint32_t idx, const char* name, bool isBool, int32_t val) {
+    TracyParameterSetup(idx, name, isBool, val);
 }
 
 void AdapterTracy::ensureReady() {

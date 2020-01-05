@@ -4,6 +4,16 @@
 
 class ScopeInfoTracy;
 
+enum TracyParams {
+    TP_OmitFilePath = 1,
+	TP_NetworkProfilerCallstack,
+	TP_NetworkProfilerLogPacketContent,
+	TP_EngineProfilingEnabled,
+	TP_InstructionProfilingEnabled,
+	TP_InstructionGetVarCallstackEnabled
+};
+
+
 class AdapterTracy final : public ProfilerAdapter
 {
 public:
@@ -14,6 +24,7 @@ public:
 		uint32_t fileline) override;
 	std::shared_ptr<ScopeTempStorage> enterScope(std::shared_ptr<ScopeInfo> scope) override;
 	std::shared_ptr<ScopeTempStorage> enterScope(std::shared_ptr<ScopeInfo> scope, uint64_t threadID) override;
+	std::shared_ptr<ScopeTempStorage> enterScope(std::shared_ptr<ScopeInfo> scope, ScopeWithCallstack cs) override;
 	void leaveScope(std::shared_ptr<ScopeTempStorage> tempStorage) override;
 	void setName(std::shared_ptr<ScopeTempStorage> tempStorage, const intercept::types::r_string& name) override;
 	void setDescription(std::shared_ptr<ScopeTempStorage> tempStorage, const intercept::types::r_string& descr) override;
@@ -25,6 +36,9 @@ public:
 	static bool isConnected();
 
 	static void sendCallstack(intercept::types::auto_array<std::pair<intercept::types::r_string, uint32_t>>& cs);
+
+	static void addParameter(uint32_t idx, const char* name, bool isBool, int32_t val);
+
 private:
 	static void ensureReady();
 	using scopeCacheKey = std::tuple<intercept::types::r_string, intercept::types::r_string,uint32_t>;

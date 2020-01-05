@@ -10,7 +10,6 @@ public:
     static uint32_t getVariableSize(const game_value& var, std::string* data);
     static inline int64_t remoteExecSize = 0;
     static inline int64_t setVariableSize = 0;
-    static inline bool logPacketContent = false;
 };
 
 static inline NetworkProfiler GNetworkProfiler = NetworkProfiler();

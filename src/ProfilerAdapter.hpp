@@ -21,6 +21,11 @@ enum class AdapterType {
     invalid
 };
 
+
+struct ScopeWithCallstack {
+    bool enabled = true;
+};
+
 class ProfilerAdapter {
 public:
     virtual ~ProfilerAdapter() = default;
@@ -31,6 +36,8 @@ public:
 
     virtual std::shared_ptr<ScopeTempStorage> enterScope(std::shared_ptr<ScopeInfo> scope) = 0;
     virtual std::shared_ptr<ScopeTempStorage> enterScope(std::shared_ptr<ScopeInfo> scope, uint64_t threadID) = 0;
+    virtual std::shared_ptr<ScopeTempStorage> enterScope(std::shared_ptr<ScopeInfo> scope, ScopeWithCallstack cs) { return enterScope(scope); };
+    virtual void sendCallstack(const intercept::types::auto_array<std::pair<intercept::types::r_string, uint32_t>>& callstack) {};
     virtual void leaveScope(std::shared_ptr<ScopeTempStorage> tempStorage) = 0;
     virtual void setThisArgs(std::shared_ptr<ScopeTempStorage> tempStorage, intercept::types::game_value thisArgs) {}
     virtual void setName(std::shared_ptr<ScopeTempStorage> tempStorage, const intercept::types::r_string& descr) {}
@@ -43,7 +50,7 @@ public:
     virtual void cleanup() {}
 
     bool isScheduledSupported() const { return supportsScheduled; }
-    void setOmitFilePaths() { omitFilePaths = true; }
+    void setOmitFilePaths(bool newValue = true) { omitFilePaths = newValue; }
     bool getOmitFilePaths() const { return omitFilePaths; }
     AdapterType getType() const { return type; }
 protected:
@@ -52,4 +59,4 @@ protected:
     AdapterType type = AdapterType::invalid;
 };
 
-static inline std::shared_ptr<ProfilerAdapter> GProfilerAdapter;
+inline std::shared_ptr<ProfilerAdapter> GProfilerAdapter;

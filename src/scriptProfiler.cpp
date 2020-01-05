@@ -59,7 +59,14 @@ public:
 #endif
         }
         ~scopeData() {
+            //static bool stop = false;
+            //game_state* gs = (game_state*)0x00007ff73083e450;
+          
             GProfilerAdapter->leaveScope(scopeTempStorage);
+            //if (stop && name.find("handleStateDefault"sv) != -1) {
+            //    std::this_thread::sleep_for(500ms);
+            //    __debugbreak();
+            //}
         }
         std::shared_ptr<ScopeTempStorage> scopeTempStorage;
         r_string name;
@@ -839,6 +846,10 @@ std::optional<std::string> getCommandLineParam(std::string_view needle) {
 scriptProfiler::scriptProfiler() {
     startTime = std::chrono::high_resolution_clock::now();
 }
+
+auto_array<std::pair<r_string, uint32_t>>(*getCallstackRaw)(game_state* gs) = nullptr;
+bool InstructionCallstack = false;
+
 #ifndef __linux__
 #pragma region Instructions
 namespace intercept::__internal {
@@ -952,7 +963,9 @@ public:
                 found = ret.first;
             }
 
-            auto temp = GProfilerAdapter->enterScope(found->second);
+            auto temp = GProfilerAdapter->enterScope(found->second, ScopeWithCallstack{ getCallstackRaw != nullptr });
+            if (getCallstackRaw && InstructionCallstack) AdapterTracy::sendCallstack(getCallstackRaw(&state));
+
             auto res = reinterpret_cast<OrigEx>(oldFunc.vt_GameInstructionVariable)(this, state, t);
             GProfilerAdapter->leaveScope(temp);
             return res;
@@ -1148,10 +1161,6 @@ public:
 #endif
 void scriptProfiler::preStart() {
     sqf::diag_log("Arma Script Profiler preStart");
-    if (getCommandLineParam("-profilerEnableInstruction"sv)) {
-        sqf::diag_log("ASP: Instruction Level profiling enabled"sv);
-        instructionLevelProfiling = true;
-    }
 
     auto startAdapter = getCommandLineParam("-profilerAdapter"sv);
 
@@ -1187,6 +1196,23 @@ void scriptProfiler::preStart() {
         GProfilerAdapter = std::make_shared<AdapterTracy>();
         sqf::diag_log("ASP: Selected Tracy Adapter"sv);
     }
+
+    if (getCommandLineParam("-profilerEnableInstruction"sv)) {
+        sqf::diag_log("ASP: Instruction Level profiling enabled"sv);
+        instructionLevelProfiling = true;
+    }
+
+    if (auto tracyAdapter = std::dynamic_pointer_cast<AdapterTracy>(GProfilerAdapter)) {
+
+        auto iface = client::host::request_plugin_interface("BIDebugEngine_getCallstack", 1);
+        if (iface)
+            getCallstackRaw = reinterpret_cast<decltype(getCallstackRaw)>(*iface);
+
+        tracyAdapter->addParameter(TP_InstructionProfilingEnabled, "InstructionProfiling", true, getCommandLineParam("-profilerEnableInstruction"sv) ? 1 : 0);
+        if (getCallstackRaw)
+            tracyAdapter->addParameter(TP_InstructionGetVarCallstackEnabled, "InstrProfGetVarCallstack", true, 0);
+    }
+
 
     if (getCommandLineParam("-profilerEnableEngine"sv)) {
         diag_log("ASP: Enable Engine Profiling"sv);
@@ -1224,6 +1250,10 @@ void scriptProfiler::preStart() {
     if (getCommandLineParam("-profilerNoPaths"sv)) {
         diag_log("ASP: Omitting file paths"sv);
         GProfilerAdapter->setOmitFilePaths();
+    }
+
+    if (auto tracyAdapter = std::dynamic_pointer_cast<AdapterTracy>(GProfilerAdapter)) {
+        tracyAdapter->addParameter(TP_OmitFilePath, "OmitFilePaths", true, getCommandLineParam("-profilerNoPaths"sv) ? 1 : 0);
     }
 
     static auto codeType = client::host::register_sqf_type("ProfileScope"sv, "ProfileScope"sv, "Dis is a profile scope. It profiles things."sv, "ProfileScope"sv, createGameDataProfileScope);

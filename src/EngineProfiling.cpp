@@ -6,9 +6,6 @@
 #include "scriptProfiler.hpp"
 #include "SignalSlot.hpp"
 
-extern std::shared_ptr<ProfilerAdapter> GProfilerAdapter;
-
-
 struct CounterHasher {
 public:
     size_t operator()(const std::pair<PCounter*, int>& key) const {
@@ -28,6 +25,7 @@ bool noMem = false;
 bool tracyConnected = false;
 bool checkMainThread = false;
 thread_local bool isMainThread = false;
+bool EngineProfilingEnabled = true;
 
 std::string getScriptName(const r_string& str, const r_string& filePath, uint32_t returnFirstLineIfNoName = 0);
 void addScopeInstruction(auto_array<ref<game_instruction>>& bodyCode, const r_string& scriptName);
@@ -62,7 +60,7 @@ bool PCounter::shouldTime() {
     if (slot < 0) return false;
 
     if (checkMainThread && !isMainThread) return false;
-    if (!tracyConnected) return false;
+    if (!tracyConnected || !EngineProfilingEnabled) return false;
 
     //exclude security cat, evwfGet evGet and so on as they spam too much and aren't useful
     if (cat && cat[0] == 's' && cat[1] == 'e' && cat[2] == 'c' && cat[3] == 'u') return false;
@@ -122,8 +120,10 @@ void ScopeProf::doEnd() {
 }
 
 void ArmaProf::frameEnd(float fps, float time, int smth) {
-    if (capture)
-        GProfilerAdapter->perFrame();
+    if (capture) {
+        auto armaAdapter = std::dynamic_pointer_cast<AdapterTracy>(GProfilerAdapter);
+        armaAdapter->perFrame();
+    }
 }
 
 void ArmaProf::scopeCompleted(int64_t start, int64_t end, intercept::types::r_string* stuff, PCounter* counter) {
@@ -203,6 +203,12 @@ void EngineProfiling::init() {
         {
             tracyConnected = state;
         });
+
+    if (auto tracyAdapter = std::dynamic_pointer_cast<AdapterTracy>(GProfilerAdapter)) {
+        tracyAdapter->addParameter(TP_EngineProfilingEnabled, "EngineProfilingEnabled", true, 1);
+    }
+
+
 
     //order is important
     //hooks.placeHook(hookTypes::doEnd, pat_doEnd, reinterpret_cast<uintptr_t>(doEnd), profEndJmpback, 1, true);
