@@ -61,8 +61,8 @@ public:
         ~scopeData() {
             //static bool stop = false;
             //game_state* gs = (game_state*)0x00007ff73083e450;
-          
-            GProfilerAdapter->leaveScope(scopeTempStorage);
+            if (scopeTempStorage) //no need to if its nullptr
+                GProfilerAdapter->leaveScope(scopeTempStorage);
             //if (stop && name.find("handleStateDefault"sv) != -1) {
             //    std::this_thread::sleep_for(500ms);
             //    __debugbreak();
@@ -175,8 +175,9 @@ public:
         //        spacing += " ";
         //    }
         //}
-          
-        state.set_local_variable("1scp"sv, game_value(new GameDataProfileScope(std::move(data))), false);
+
+        static r_string scp("1scp"sv);
+        state.set_local_variable(scp, game_value(new GameDataProfileScope(std::move(data))), false);
 
         //if (name == "CBA_fnc_compileFunction") {
         //    diag_log("preinitPush"sv);
