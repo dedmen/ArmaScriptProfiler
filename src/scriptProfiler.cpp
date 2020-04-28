@@ -669,8 +669,8 @@ std::optional<r_string> tryGetNameFromInitFunctions(game_state& state) {
 }
 
 std::optional<r_string> tryGetNameFromCBACompile(game_state& state) {
-    if (std::string_view(state.get_vm_context()->get_current_position().sourcefile) != std::string_view(R"(\x\cba\addons\xeh\fnc_compileFunction.sqf [CBA_fnc_compileFunction])"sv)) return {};
-
+    const std::string cbaCompile_Path(R"(\x\cba\addons\xeh\fnc_compileFunction.sqf)");
+    if (state.get_vm_context()->get_current_position().sourcefile.find(cbaCompile_Path) != 0) return {};
     r_string fncname = state.get_local_variable("_funcname"sv);
     return fncname;
 }
