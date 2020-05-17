@@ -1,0 +1,11 @@
+name = "ArmaScriptProfiler"
+prefix = "asp"
+version = "1.0.0"
+author = "dedmen"
+files = [
+    "mod.cpp"
+]
+key_name = "asp"
+reuse_private_key = false
+authority = "asp"
+sig_version = 3
