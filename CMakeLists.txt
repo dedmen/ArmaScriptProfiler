@@ -2,7 +2,11 @@ cmake_minimum_required (VERSION 3.13)
 if (${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
 	set (CMAKE_SYSTEM_VERSION 8.1 CACHE TYPE INTERNAL FORCE) #Force 8.1 SDK, to keep it compatible with win7
 endif()
-project (ArmaScriptProfiler CXX ASM_MASM)
+if(MSVC)
+	project (ArmaScriptProfiler CXX ASM_MASM)
+else()
+	project (ArmaScriptProfiler CXX ASM)
+endif()
 find_package (Threads)
 
 set(USE_64BIT_BUILD ${CMAKE_CL_64})
