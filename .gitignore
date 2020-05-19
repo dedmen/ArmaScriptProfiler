@@ -41,3 +41,13 @@
 /src/ArmaScriptProfiler.vcxproj.user
 /src/Release
 *.biprivatekey
+
+# CLion
+.idea/
+cmake-build-*/
+
+# HEMTT
+.hemtt/local
+addons/*.pbo
+keys/*
+releases/*
