@@ -611,7 +611,7 @@ void addScopeInstruction(auto_array<ref<game_instruction>>& bodyCode, const r_st
     if (bodyCode.size() < 4) return;
 
 
-    auto& funcPath = bodyCode.front()->sdp.sourcefile;
+    auto& funcPath = bodyCode.front()->sdp->sourcefile;
     //r_string src = getScriptFromFirstLine(bodyCode->instructions->front()->sdp, false);
 
 
@@ -621,7 +621,7 @@ void addScopeInstruction(auto_array<ref<game_instruction>>& bodyCode, const r_st
     curElInstruction->sdp = bodyCode.front()->sdp;
     curElInstruction->scopeInfo = GProfilerAdapter->createScope(curElInstruction->name,
         funcPath.empty() ? curElInstruction->name : funcPath,
-        curElInstruction->sdp.sourceline);
+        curElInstruction->sdp->sourceline);
     //if (scriptName == "<unknown>")
     //curElInstruction->eventDescription->source = src;
 
@@ -702,7 +702,7 @@ game_value compileRedirect2(game_state& state, game_value_parameter message) {
 
     GProfilerAdapter->leaveScope(tempData);
 
-    auto& funcPath = bodyCode->instructions.front()->sdp.sourcefile;
+    auto& funcPath = bodyCode->instructions.front()->sdp->sourcefile;
     //#TODO pass instructions to getScriptName and check if there is a "scriptName" or "scopeName" unary command call
     r_string scriptName(getScriptName(str, funcPath, 32));
 
@@ -741,7 +741,7 @@ game_value compileRedirectFinal(game_state& state, game_value_parameter message)
 
     GProfilerAdapter->leaveScope(tempData);
 
-    auto& funcPath = bodyCode->instructions.front()->sdp.sourcefile;
+    auto& funcPath = bodyCode->instructions.front()->sdp->sourcefile;
 
     auto scriptName = tryGetNameFromInitFunctions(state);
     if (!scriptName) scriptName = tryGetNameFromCBACompile(state);
@@ -1217,7 +1217,7 @@ void scriptProfiler::preStart() {
 
     if (getCommandLineParam("-profilerEnableEngine"sv)) {
         diag_log("ASP: Enable Engine Profiling"sv);
-        if (intercept::sqf::product_version().branch != "Profile") {
+        if (intercept::sqf::product_version().branch != "Profile"sv) {
             intercept::sqf::diag_log("ERROR ArmaScriptProfiler: Cannot enable engine profiling without Profiling build of Arma"sv);
         } else {
             engineProf = std::make_shared<EngineProfiling>();
@@ -1514,7 +1514,7 @@ public:
         }
 #endif
 
-        auto& funcPath = bodyCode->instructions.front()->sdp.sourcefile;
+        auto& funcPath = bodyCode->instructions.front()->sdp->sourcefile;
 
         auto scriptName = tryGetNameFromInitFunctions(state);
         if (!scriptName) scriptName = tryGetNameFromCBACompile(state);
