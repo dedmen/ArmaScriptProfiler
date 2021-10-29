@@ -317,7 +317,7 @@ void NetworkProfiler::init() {
 
         tracy::Profiler::PlotData("remoteExec", remoteExecSize);
 
-        return client::host::functions.invoke_raw_unary(__sqf::unary__remoteexec__array__ret__any, arg);
+        return client::host::functions.invoke_raw_unary(__sqf::unary__remoteexec__array__ret__string_nothing, arg);
     }, game_data_type::ANY, game_data_type::ARRAY);
 
     static auto _remoteExecBin = client::host::register_sqf_command("remoteExec", "Profiler redirect", [](game_state& gs, game_value_parameter par, game_value_parameter arg) -> game_value {
@@ -344,7 +344,7 @@ void NetworkProfiler::init() {
             zone.Text(name.c_str(), name.size());
 
         tracy::Profiler::PlotData("remoteExec", remoteExecSize);
-        return  host::functions.invoke_raw_binary(__sqf::binary__remoteexec__any__array__ret__any, par, arg);
+        return  host::functions.invoke_raw_binary(__sqf::binary__remoteexec__any__array__ret__string_nothing, par, arg);
     }, game_data_type::ANY, game_data_type::ANY, game_data_type::ARRAY);
 
     static auto _remoteExecCallUn = client::host::register_sqf_command("remoteExecCall", "Profiler redirect", [](game_state& gs, game_value_parameter arg) -> game_value {
@@ -371,7 +371,7 @@ void NetworkProfiler::init() {
 
         tracy::Profiler::PlotData("remoteExec", remoteExecSize);
 
-        return client::host::functions.invoke_raw_unary(__sqf::unary__remoteexeccall__array__ret__any, arg);
+        return client::host::functions.invoke_raw_unary(__sqf::unary__remoteexeccall__array__ret__string_nothing, arg);
     }, game_data_type::ANY, game_data_type::ARRAY);
 
     static auto _remoteExecCallBin = client::host::register_sqf_command("remoteExecCall", "Profiler redirect", [](game_state& gs, game_value_parameter par, game_value_parameter arg) -> game_value {
@@ -399,7 +399,7 @@ void NetworkProfiler::init() {
             zone.Text(name.c_str(), name.size());
 
         tracy::Profiler::PlotData("remoteExec", remoteExecSize);
-        return  host::functions.invoke_raw_binary(__sqf::binary__remoteexeccall__any__array__ret__any, par, arg);
+        return  host::functions.invoke_raw_binary(__sqf::binary__remoteexeccall__any__array__ret__string_nothing, par, arg);
     }, game_data_type::ANY, game_data_type::ANY, game_data_type::ARRAY);
 
     static auto _setVariableObj = client::host::register_sqf_command("setVariable", "Profiler redirect", [](game_state& gs, game_value_parameter par, game_value_parameter arg) -> game_value {
