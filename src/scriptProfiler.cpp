@@ -805,6 +805,48 @@ game_value callExtensionArgsRedirect(game_state&, game_value_parameter ext, game
     return res;
 }
 
+static unary_function compileScriptFunc;
+
+game_value compileScriptRedirect(game_state& state, game_value_parameter message) {
+
+    if (!profiler.compileScriptScope) {
+        static r_string compileEventText("compileScript");
+        static r_string profName("scriptProfiler.cpp");
+        profiler.compileScriptScope = GProfilerAdapter->createScope(compileEventText, profName, __LINE__);
+    }
+
+    auto tempData = GProfilerAdapter->enterScope(profiler.compileScriptScope);
+    GProfilerAdapter->setName(tempData, "compileScript " + static_cast<r_string>(message[0]));
+
+    r_string str = message;
+
+    auto comp = host::functions.invoke_raw_unary(compileScriptFunc, message);
+    auto bodyCode = static_cast<game_data_code*>(comp.data.get());
+    if (bodyCode->instructions.empty()) {
+        GProfilerAdapter->leaveScope(tempData);
+        return comp;
+    }
+
+#ifdef WITH_BROFILER
+    if (auto brofilerData = std::dynamic_pointer_cast<ScopeTempStorageBrofiler>(tempData)) {
+        r_string src = getScriptFromFirstLine(bodyCode->instructions->front()->sdp, false);
+        brofilerData->evtDt->sourceCode = src;
+    }
+#endif
+
+    GProfilerAdapter->leaveScope(tempData);
+
+    auto& funcPath = bodyCode->instructions.front()->sdp->sourcefile;
+    //#TODO pass instructions to getScriptName and check if there is a "scriptName" or "scopeName" unary command call
+    r_string scriptName(getScriptName(str, funcPath, 32));
+
+    //if (scriptName.empty()) scriptName = "<unknown>";
+
+    if (bodyCode->instructions.size() > 4 && !scriptName.empty())// && scriptName != "<unknown>"
+        addScopeInstruction(bodyCode->instructions, scriptName);
+
+    return comp;
+}
 
 
 game_value diag_logRedirect(game_state&, game_value_parameter msg) {
@@ -1281,6 +1323,12 @@ void scriptProfiler::preStart() {
         //static auto _profilerCompile2 = client::host::register_sqf_command("compile2", "Profiler redirect", compileRedirect, game_data_type::CODE, game_data_type::STRING);
         //static auto _profilerCompile3 = client::host::register_sqf_command("compile3", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
         static auto _profilerCompileF = client::host::register_sqf_command("compileFinal", "Profiler redirect", compileRedirectFinal, game_data_type::CODE, game_data_type::STRING);
+
+
+        compileScriptFunc = (unary_function)host::functions.get_unary_function_typed("compilescript"sv, "ARRAY"sv);
+        if (compileScriptFunc)
+            static auto _profilerCompileScript = client::host::register_sqf_command("compileScript", "Profiler redirect", compileScriptRedirect, game_data_type::CODE, game_data_type::ARRAY);
+
     };
     static auto _profilerCallExt = client::host::register_sqf_command("callExtension", "Profiler redirect", callExtensionRedirect, game_data_type::STRING, game_data_type::STRING, game_data_type::STRING);
     static auto _profilerCallExtArgs = client::host::register_sqf_command("callExtension", "Profiler redirect", callExtensionArgsRedirect, game_data_type::STRING, game_data_type::STRING, game_data_type::ARRAY);
