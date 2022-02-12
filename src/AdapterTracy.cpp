@@ -173,12 +173,15 @@ void AdapterTracy::sendCallstack(intercept::types::auto_array<std::pair<intercep
     if (cs.size() > 63)
         cs.resize(63);
 
+    // Code from void SendLuaCallstack( lua_State* L, uint32_t depth )
+
+
     uint32_t depth = cs.size();
 
     const char* func[64];
     uint32_t fsz[64];
     uint32_t ssz[64];
-    uint32_t spaceNeeded = 4;     // cnt
+    uint32_t spaceNeeded = 4;     // sizeof cnt
 
     uint32_t cnt = 0;
     for (auto& [file, line] : cs) {
@@ -208,17 +211,20 @@ void AdapterTracy::sendCallstack(intercept::types::auto_array<std::pair<intercep
     }
     assert(dst - ptr == spaceNeeded + 4);
 
-    tracy::Magic magic;
-    auto token = tracy::GetToken();
-    auto& tail = token->get_tail_index();
-    auto item = token->enqueue_begin(magic);
-    tracy::MemWrite(&item->hdr.type, tracy::QueueType::CallstackArma);
-    tracy::MemWrite(&item->callstackAlloc.ptr, (uint64_t)ptr);
+
+    // inlined macro TracyQueuePrepare
+    tracy::moodycamel::ConcurrentQueueDefaultTraits::index_t __magic;
+    auto __token = tracy::GetToken();
+    auto& __tail = __token->get_tail_index();
+    auto item = __token->enqueue_begin( __magic );
+    MemWrite( &item->hdr.type, tracy::QueueType::CallstackArma);
+    tracy::MemWrite(&item->callstackAllocFat.ptr, (uint64_t)ptr);
+
     auto str = new CallstackStruct();
     str->data = cs;
-    tracy::MemWrite(&item->callstackAlloc.nativePtr, (uint64_t)str);
-    tail.store(magic + 1, std::memory_order_release);
+    tracy::MemWrite(&item->callstackAllocFat.nativePtr, (uint64_t)str);
 
+    TracyQueueCommit(callstackFatThread);
 }
 
 void AdapterTracy::addParameter(uint32_t idx, const char* name, bool isBool, int32_t val) {

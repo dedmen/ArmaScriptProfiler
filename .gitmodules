@@ -3,4 +3,4 @@
 	url = https://github.com/intercept/intercept.git
 [submodule "tracy"]
 	path = tracy
-	url = https://bitbucket.org/dedmenmiller/tracy.git
+	url = https://github.com/dedmen/tracy.git
