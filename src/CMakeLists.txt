@@ -113,6 +113,7 @@ else()
 		${INTERCEPT_PLUGIN_NAME} PRIVATE 
 		"/MP" "/Zi"
 		"$<$<CONFIG:Release>:/MT>"
+		"$<$<CONFIG:Debug>:/MTd>"
 		"$<$<CONFIG:Release>:/Ox>"
 		"$<$<CONFIG:Release>:/Ob2>"
 		"$<$<CONFIG:Release>:/Oi>"
