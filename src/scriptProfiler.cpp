@@ -818,7 +818,7 @@ game_value compileScriptRedirect(game_state& state, game_value_parameter message
     auto tempData = GProfilerAdapter->enterScope(profiler.compileScriptScope);
     GProfilerAdapter->setName(tempData, "compileScript " + static_cast<r_string>(message[0]));
 
-    r_string str = message;
+    auto& args = message.to_array();
 
     auto comp = host::functions.invoke_raw_unary(compileScriptFunc, message);
     auto bodyCode = static_cast<game_data_code*>(comp.data.get());
@@ -836,9 +836,22 @@ game_value compileScriptRedirect(game_state& state, game_value_parameter message
 
     GProfilerAdapter->leaveScope(tempData);
 
-    auto& funcPath = bodyCode->instructions.front()->sdp->sourcefile;
+    auto& funcPath = args[0];
     //#TODO pass instructions to getScriptName and check if there is a "scriptName" or "scopeName" unary command call
-    r_string scriptName(getScriptName(str, funcPath, 32));
+
+    r_string scriptName;
+    if (args.size() > 2) {
+        auto scrNamePrefixHeader = getScriptName(args[2], funcPath, 32);
+        if (scrNamePrefixHeader != "<unknown>")
+            scriptName = scrNamePrefixHeader;
+    }
+
+    if (scriptName.empty())
+    {
+        // Load file contents and see if we can grab name from there
+        auto scriptContents = sqf::preprocess_file_line_numbers(args[0]);
+        scriptName = getScriptName(scriptContents, funcPath, 32);
+    };
 
     //if (scriptName.empty()) scriptName = "<unknown>";
 
