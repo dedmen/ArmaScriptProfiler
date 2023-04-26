@@ -25,7 +25,7 @@
 using namespace intercept;
 using namespace std::chrono_literals;
 std::chrono::high_resolution_clock::time_point startTime;
-static sqf_script_type GameDataProfileScope_type;
+static sqf_script_type* GameDataProfileScope_type;
 
 scriptProfiler profiler{};
 bool instructionLevelProfiling = false;
@@ -76,7 +76,7 @@ public:
     GameDataProfileScope() = default;
     GameDataProfileScope(std::shared_ptr<scopeData>&& _data) noexcept : data(std::move(_data)) {}
     void lastRefDeleted() const override { delete this; }
-    const sqf_script_type& type() const override { return GameDataProfileScope_type; }
+    const sqf_script_type& type() const override { return *GameDataProfileScope_type; }
     ~GameDataProfileScope() override = default;
     bool get_as_bool() const override { return true; }
     float get_as_number() const override { return 0.f; }
@@ -176,7 +176,7 @@ public:
         //    }
         //}
 
-        static r_string scp("1scp"sv);
+        static r_string scp("1scp"sv); //#TODO this crashes game at shutdown because it tries to deallocate
         state.set_local_variable(scp, game_value(new GameDataProfileScope(std::move(data))), false);
 
         //if (name == "CBA_fnc_compileFunction") {
