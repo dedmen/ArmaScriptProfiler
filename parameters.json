@@ -1,0 +1,13 @@
+{
+  "profilerAdapter": "Tracy",
+  "profilerOutput": "",
+  "profilerEnableInstruction": true,
+  "profilerEnableEngine": false,
+  "profilerEngineThreads": false,
+  "profilerEngineDoFile": false,
+  "profilerEngineDoMem": false,
+  "profilerNoPaths": false,
+  "profilerNoInstrumentation": false,
+  "profilerEnableFAlloc": false,
+  "profilerEnableNetwork": true
+}

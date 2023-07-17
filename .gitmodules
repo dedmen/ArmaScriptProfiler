@@ -4,3 +4,6 @@
 [submodule "tracy"]
 	path = tracy
 	url = https://github.com/dedmen/tracy.git
+[submodule "lib/json"]
+	path = lib/json
+	url = https://github.com/nlohmann/json.git

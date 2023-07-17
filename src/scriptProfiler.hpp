@@ -1,6 +1,9 @@
 #pragma once
 #include <chrono>
 #include <types.hpp>
+#include <filesystem>
+#include <fstream>
+#include <nlohmann/json.hpp>
 #include "ProfilerAdapter.hpp"
 #include "EngineProfiling.h"
 #include "FAllocHook.h"
@@ -24,7 +27,10 @@ public:
     intercept::types::r_string waitForAdapter;
     std::shared_ptr<EngineProfiling> engineProf;
     std::shared_ptr<FAllocHook> allocHook;
+    std::optional<std::string> getCommandLineParam(std::string_view needle);
     bool engineFrameEnd = false;
+    bool hasParameterFile = false;
+    nlohmann::json json;
 };
 
 extern scriptProfiler profiler;
