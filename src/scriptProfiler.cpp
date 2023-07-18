@@ -32,10 +32,6 @@ std::chrono::high_resolution_clock::time_point startTime;
 static sqf_script_type* GameDataProfileScope_type;
 static nlohmann::json json;
 
-#ifndef __linux__
-extern HMODULE ghModule;
-#endif
-
 scriptProfiler profiler{};
 bool instructionLevelProfiling = false;
 
