@@ -2,19 +2,15 @@
 #include <intercept.hpp>
 #include <numeric>
 #include <random>
+#include <filesystem>
+#include <fstream>
 #ifndef __linux__
 #include <Windows.h>
-#define char_t wchar_t
-#define DIR_SEPARATOR L'\\'
-#define STR(s) L ## s
 #else
 #include <signal.h>
-#include <fstream>
 #include <limits.h>
 #include <unistd.h>
-#define char_t char
-#define DIR_SEPARATOR '/'
-#define STR(s) s
+#include <link.h>
 #endif
 #include "ProfilerAdapter.hpp"
 #include "AdapterArmaDiag.hpp"
@@ -32,9 +28,13 @@
 
 using namespace intercept;
 using namespace std::chrono_literals;
-using string_t = std::basic_string<char_t>;
 std::chrono::high_resolution_clock::time_point startTime;
 static sqf_script_type* GameDataProfileScope_type;
+static nlohmann::json json;
+
+#ifndef __linux__
+extern HMODULE ghModule;
+#endif
 
 scriptProfiler profiler{};
 bool instructionLevelProfiling = false;
@@ -894,8 +894,19 @@ std::string get_command_line() {
 #endif
 }
 
-std::optional<std::string> scriptProfiler::getCommandLineParam(std::string_view needle) {
-    if (hasParameterFile && json.contains(needle.substr(1))) {
+std::optional<std::string> getCommandLineParam(std::string_view needle) {
+    std::string commandLine = get_command_line();
+    const auto found = commandLine.find(needle);
+    if (found != std::string::npos) {
+        const auto spacePos = commandLine.find(' ', found + needle.length() + 1);
+        const auto valueLength = spacePos - (found + needle.length() + 1);
+        auto adapterStr = commandLine.substr(found + needle.length() + 1, valueLength);
+        if (adapterStr.back() == '"')
+            adapterStr = adapterStr.substr(0, adapterStr.length() - 1);
+        return adapterStr;
+    }
+
+    if (!json.empty() && json.contains(needle.substr(1))) {
         switch (json[needle.substr(1)].type()) {
             case nlohmann::json::value_t::boolean:
             {
@@ -912,18 +923,6 @@ std::optional<std::string> scriptProfiler::getCommandLineParam(std::string_view 
             }
             default:
                 return {};
-        }
-    }
-    else {
-        std::string commandLine = get_command_line();
-        const auto found = commandLine.find(needle);
-        if (found != std::string::npos) {
-            const auto spacePos = commandLine.find(' ', found + needle.length() + 1);
-            const auto valueLength = spacePos - (found + needle.length() + 1);
-            auto adapterStr = commandLine.substr(found + needle.length() + 1, valueLength);
-            if (adapterStr.back() == '"')
-                adapterStr = adapterStr.substr(0, adapterStr.length() - 1);
-            return adapterStr;
         }
     }
     return {};
@@ -1246,75 +1245,68 @@ public:
 #pragma endregion Instructions
 #endif
 
-std::filesystem::path findFilePath() {
+
 #if __linux__
-    char_t buffer[PATH_MAX] = { 0 };
-    ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer)-1);
-    if (len != -1) {
-        buffer[len] = '\0';
+static std::filesystem::path sharedObjectPath;
+extern "C" int iterateCallback(struct dl_phdr_info* info, size_t size, void* data) {
+    std::filesystem::path sharedPath = info->dlpi_name;
+    if (sharedPath.filename() == "ArmaScriptProfiler_x64.so"sv) {
+        sharedObjectPath = sharedPath;
+        return 0;
     }
-#else
-    char_t buffer[MAX_PATH] = { 0 };
-    DWORD len = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
-    if (len != 0) {
-        buffer[len] = L'\0';
-    }
+    return 0;
+}
 #endif
 
-    string_t path{ std::move(buffer) };
-    auto pos = path.find_last_of(DIR_SEPARATOR);
+std::filesystem::path getSharedObjectPath() {
+#if __linux__
+    dl_iterate_phdr(iterateCallback, nullptr);
+    return sharedObjectPath;
 
-    // probably could do this better
-    if (pos == string_t::npos) {
-        return std::filesystem::path{"BADPATH"};
-    }
-    path = path.substr(0, pos + 1);
-
-    string_t dirName{ STR("config") };
-    string_t fileName{ STR("parameters.json") };
-    std::vector<string_t> possiblePaths;
-    // 15 was a random dice roll. Ideally we only need 1 possible path, but that will never happen in the real world.
-    possiblePaths.reserve(15);
-
-    for (auto const& dirEntry : std::filesystem::recursive_directory_iterator{ path }) {
-        if (dirEntry.is_directory()) {
-            string_t dirPath = dirEntry.path().native();
-            auto pos = dirPath.find(dirName);
-            if (pos == string_t::npos) { continue; }
-            possiblePaths.push_back(std::move(dirPath));
-        }
+#else
+    wchar_t buffer[MAX_PATH] = { 0 };
+    HMODULE handle = nullptr;
+    if(GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            reinterpret_cast<LPCWSTR>(&getSharedObjectPath), &handle) == 0) {
+        sqf::diag_log("getSharedObjectPath: GetModuleHandle failed");
+        return std::filesystem::path{};
     }
 
-    for (auto const& dirEntry : possiblePaths) {
-
-        std::filesystem::path filePath{dirEntry + DIR_SEPARATOR + fileName};
-        if (std::filesystem::exists(filePath)) {
-            return filePath;
-        }
+    DWORD len = GetModuleFileNameW(handle, buffer, MAX_PATH);
+    if (len == 0) {
+        return std::filesystem::path{};
     }
+    return std::filesystem::path{buffer};
+#endif
+}
 
-    return std::filesystem::path{"BADPATH"};
+std::filesystem::path findConfigFilePath() {
+
+    std::filesystem::path path = getSharedObjectPath();
+    path = path.parent_path().parent_path();
+
+    std::filesystem::path dirName{ "config"sv };
+    std::filesystem::path fileName{ "parameters.json"sv };
+    path = path / dirName / fileName;
+
+    return path;
 }
 
 void scriptProfiler::preStart() {
     sqf::diag_log("Arma Script Profiler preStart");
-    //std::filesystem::path filePath{"config/paramaters.json"};
 
-    std::filesystem::path filePath = findFilePath();
-    hasParameterFile = (filePath.generic_string() != "BADPATH"sv);
-  
-
-    if (hasParameterFile) {
+    std::filesystem::path filePath = findConfigFilePath();
+    
+    if (std::filesystem::exists(filePath)) {
+        sqf::diag_log("ASP: Found a Configuration File"sv);
         std::ifstream file(filePath);
         try {
             json = nlohmann::json::parse(file);
-            // TODO make this string view
         }
         catch (nlohmann::json::exception& error) {
             // log error, set parameterFile false, and continue by using getCommandLineParam
             sqf::diag_log(error.what());
-            hasParameterFile = false;
-            
+             
         }
     }
 
