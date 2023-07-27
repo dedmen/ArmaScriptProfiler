@@ -425,7 +425,7 @@ std::string getScriptName(const r_string& str, const r_string& filePath, uint32_
     if (returnFirstLineIfNoName) {
         auto linebreak = str.find("\n", 0);
         if (linebreak < 20) {
-            auto linebreak2 = str.find("\n", linebreak);
+            auto linebreak2 = str.find("\n", linebreak + 1);
             if (linebreak2 > linebreak) linebreak = linebreak2;
         }
         if (linebreak != -1) {
