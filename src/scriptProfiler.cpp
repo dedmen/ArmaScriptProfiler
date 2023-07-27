@@ -596,6 +596,16 @@ public:
     r_string get_name() const override { return ""sv; }
 };
 
+bool codeHasScopeInstruction(const auto_array<ref<game_instruction>>& bodyCode)
+{
+    if (bodyCode.empty()) return false;
+
+    auto lt = typeid(*bodyCode.front().getRef()).hash_code();
+    auto rt = typeid(GameInstructionProfileScopeStart).hash_code();
+
+    return lt == rt;
+}
+
 void addScopeInstruction(auto_array<ref<game_instruction>>& bodyCode, const r_string& scriptName) {
 #ifndef __linux__
 #ifndef _WIN64
@@ -603,11 +613,7 @@ void addScopeInstruction(auto_array<ref<game_instruction>>& bodyCode, const r_st
 #endif
 #endif
     if (bodyCode.empty()) return;
-
-    auto lt = typeid(bodyCode.data()[0]).hash_code();
-    auto rt = typeid(GameInstructionProfileScopeStart).hash_code();
-
-    if (lt == rt) return;
+    if (codeHasScopeInstruction(bodyCode)) return;
     if (bodyCode.size() < 4) return;
 
 
