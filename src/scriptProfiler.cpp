@@ -352,7 +352,7 @@ game_value profileScript(game_state& state, game_value_parameter par) {
 }
 
 
-std::regex getScriptName_acefncRegex(R"(\\?[xz]\\([^\\]*)\\addons\\([^\\]*)\\(?:[^\\]*\\)*fnc?_([^.]*)\.sqf)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
+std::regex getScriptName_acefncRegex(R"(\\?(?:[xz]|idi)\\([^\\]*)\\addons\\([^\\]*)\\(?:[^\\]*\\)*fnc?_([^.]*)\.sqf)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
 std::regex getScriptName_aceMiscRegex(R"(\\?[xz]\\([^\\]*)\\addons\\([^\\]*)\\(?:[^\\]*\\)*([^.]*)\.sqf)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
 std::regex getScriptName_LinePreprocRegex(R"(#line [0-9]* (?:"|')([^"']*))", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
 std::regex getScriptName_bisfncRegex(R"(\\?A3\\(?:[^.]*\\)+fn_([^.]*).sqf)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
