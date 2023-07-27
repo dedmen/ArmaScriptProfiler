@@ -1293,7 +1293,7 @@ void scriptProfiler::preStart() {
 
     std::filesystem::path filePath = findConfigFilePath();
     
-    if (std::filesystem::exists(filePath)) {
+    if (!filePath.empty() && std::filesystem::exists(filePath)) {
         sqf::diag_log("ASP: Found a Configuration File"sv);
         std::ifstream file(filePath);
         try {
@@ -1316,7 +1316,6 @@ void scriptProfiler::preStart() {
             auto chromeAdapter = std::make_shared<AdapterChrome>();
             GProfilerAdapter = chromeAdapter;
             sqf::diag_log("ASP: Selected Chrome Adapter"sv);
-            
             auto chromeOutput = getCommandLineParam("-profilerOutput"sv);
             if (chromeOutput)
                 chromeAdapter->setTargetFile(*chromeOutput);
