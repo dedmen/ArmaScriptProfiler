@@ -4,6 +4,7 @@
 #include <random>
 #include <filesystem>
 #include <fstream>
+#include <nlohmann/json.hpp>
 #ifndef __linux__
 #include <Windows.h>
 #else
@@ -11,6 +12,7 @@
 #include <limits.h>
 #include <unistd.h>
 #include <link.h>
+#include <cstring>
 #endif
 #include "ProfilerAdapter.hpp"
 #include "AdapterArmaDiag.hpp"
@@ -1243,11 +1245,11 @@ public:
 
 
 #if __linux__
-static std::filesystem::path sharedObjectPath;
 extern "C" int iterateCallback(struct dl_phdr_info* info, size_t size, void* data) {
     std::filesystem::path sharedPath = info->dlpi_name;
-    if (sharedPath.filename() == "ArmaScriptProfiler_x64.so"sv) {
-        sharedObjectPath = sharedPath;
+    if (sharedPath.filename() == "ArmaScriptProfiler_x64.so") {
+        // native won't convert, and we don't need it to convert
+        std::memcpy(data, sharedPath.c_str(), sharedPath.native().size());
         return 0;
     }
     return 0;
@@ -1256,8 +1258,9 @@ extern "C" int iterateCallback(struct dl_phdr_info* info, size_t size, void* dat
 
 std::filesystem::path getSharedObjectPath() {
 #if __linux__
-    dl_iterate_phdr(iterateCallback, nullptr);
-    return sharedObjectPath;
+    char pathBuffer[PATH_MAX] = { 0 };
+    dl_iterate_phdr(iterateCallback, pathBuffer);
+    return std::filesystem::path{pathBuffer};
 
 #else
     wchar_t buffer[MAX_PATH] = { 0 };

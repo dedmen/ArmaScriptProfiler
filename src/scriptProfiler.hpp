@@ -1,7 +1,6 @@
 #pragma once
 #include <chrono>
 #include <types.hpp>
-#include <nlohmann/json.hpp>
 #include "ProfilerAdapter.hpp"
 #include "EngineProfiling.h"
 #include "FAllocHook.h"
