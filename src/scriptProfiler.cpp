@@ -674,10 +674,41 @@ std::optional<r_string> tryGetNameFromInitFunctions(game_state& state) {
     return fncname;
 }
 
+r_string getCallerSourceFile(const game_state& state) {
+    //return state.get_vm_context()->get_current_position().sourcefile; // This used to work, but now doesn't, just returns "CBA_fnc_preInit" even though we are in CBA_fnc_compileFinal
+
+    auto& cs = state.get_vm_context()->callstack;
+    if (cs.empty()) return {};
+    auto x1 = typeid(*cs.back().get()).raw_name();
+    if (typeid(*cs.back().get()).hash_code() != 0x6a5a9847820cfc77) return {}; // callstackitemdata
+    const auto& code = static_cast<vm_context::callstack_item_data*>(cs.back().get())->_code;
+    if (!code) return {};
+    if (code->instructions.empty()) return {};
+    return code->instructions.front()->sdp->sourcefile;
+}
+
 std::optional<r_string> tryGetNameFromCBACompile(game_state& state) {
     const std::string cbaCompile_Path(R"(\x\cba\addons\xeh\fnc_compileFunction.sqf)");
-    if (state.get_vm_context()->get_current_position().sourcefile.find(cbaCompile_Path) != 0) return {};
+    const std::string cbaCompile_PathB(R"(/x/cba/addons/xeh/fnc_compileFunction.sqf)"); // ArmaScriptCompiler does forward slashes instead (to be fixed there soonish)
+    const auto sFilePath = getCallerSourceFile(state);
+    if (sFilePath.empty()) return {};
+
+    if (getCallerSourceFile(state).find(sFilePath.front() == '/' ? cbaCompile_PathB : cbaCompile_Path) != 0) return {};
     r_string fncname = state.get_local_variable("_funcname"sv);
+    return fncname;
+}
+
+bool hasCBA = false;
+
+std::optional<r_string> tryGetNameFromCBACompileFinal(game_state& state) {
+    const std::string cbaCompile_Path(R"(\x\cba\addons\common\fnc_compileFinal.sqf)");
+    const std::string cbaCompile_PathB(R"(/x/cba/addons/common/fnc_compileFinal.sqf)"); // ArmaScriptCompiler does forward slashes instead (to be fixed there soonish)
+    const auto sFilePath = getCallerSourceFile(state);
+    if (sFilePath.empty()) return {};
+
+    if (getCallerSourceFile(state).find(sFilePath.front() == '/' ? cbaCompile_PathB : cbaCompile_Path) != 0) return {};
+    hasCBA = true; // I only need this for OnFrame handler, and that one always goes through here
+    r_string fncname = state.get_local_variable("_name"sv);
     return fncname;
 }
 
@@ -801,14 +832,14 @@ game_value compileRedirectFinal(game_state& state, game_value_parameter message)
     auto& funcPath = bodyCode->instructions.front()->sdp->sourcefile;
 
     auto scriptName = tryGetNameFromInitFunctions(state);
-    if (!scriptName) scriptName = tryGetNameFromCBACompile(state);
-    if (!scriptName) scriptName = getScriptName(str, funcPath, 32);
+    if (!scriptName) scriptName = tryGetNameFromCBACompileFinal(state);
+    if (!scriptName) scriptName = getScriptName(bodyString, funcPath, 32);
     //if (scriptName.empty()) scriptName = "<unknown>";
 
-    if (bodyCode->instructions.size() > 4 && scriptName && !scriptName->empty())// && scriptName != "<unknown>"
+    if (bodyCode->instructions.size() > 3 && scriptName && !scriptName->empty())// && scriptName != "<unknown>"
         addScopeInstruction(bodyCode->instructions, *scriptName);
 
-    return comp;
+    return resultValue;
 }
 
 game_value callExtensionRedirect(game_state&, game_value_parameter ext, game_value_parameter msg) {
@@ -896,14 +927,17 @@ game_value compileScriptRedirect(game_state& state, game_value_parameter message
     auto& funcPath = args[0];
     //#TODO pass instructions to getScriptName and check if there is a "scriptName" or "scopeName" unary command call
 
-    r_string scriptName;
+    std::optional<r_string> scriptName;
     if (args.size() > 2) {
         auto scrNamePrefixHeader = getScriptName(args[2], funcPath, 32);
         if (scrNamePrefixHeader != "<unknown>")
             scriptName = scrNamePrefixHeader;
     }
 
-    if (scriptName.empty())
+
+    if (!scriptName) scriptName = tryGetNameFromCBACompile(state);
+
+    if (!scriptName)
     {
         // Load file contents and see if we can grab name from there
         auto scriptContents = sqf::preprocess_file_line_numbers(args[0]);
@@ -912,8 +946,8 @@ game_value compileScriptRedirect(game_state& state, game_value_parameter message
 
     //if (scriptName.empty()) scriptName = "<unknown>";
 
-    if (bodyCode->instructions.size() > 4 && !scriptName.empty())// && scriptName != "<unknown>"
-        addScopeInstruction(bodyCode->instructions, scriptName);
+    if (bodyCode->instructions.size() > 3 && scriptName)// && scriptName != "<unknown>"
+        addScopeInstruction(bodyCode->instructions, *scriptName);
 
     return comp;
 }
