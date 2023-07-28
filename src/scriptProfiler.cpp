@@ -806,13 +806,13 @@ game_value compileRedirectFinal(game_state& state, game_value_parameter message)
         if (bodyCode->instructions.empty()) {
             GProfilerAdapter->leaveScope(tempData);
             return comp;
-    }
+        }
 
 #ifdef WITH_BROFILER
-    if (auto brofilerData = std::dynamic_pointer_cast<ScopeTempStorageBrofiler>(tempData)) {
-        r_string src = getScriptFromFirstLine(bodyCode->instructions->front()->sdp, false);
-        brofilerData->evtDt->sourceCode = src;
-    }
+        if (auto brofilerData = std::dynamic_pointer_cast<ScopeTempStorageBrofiler>(tempData)) {
+            r_string src = getScriptFromFirstLine(bodyCode->instructions->front()->sdp, false);
+            brofilerData->evtDt->sourceCode = src;
+        }
 #endif
 
         GProfilerAdapter->leaveScope(tempData);
@@ -1596,6 +1596,141 @@ void scriptProfiler::perFrame() {
         }
         waitForAdapter.clear();
     }
+
+
+    // Try to keep CBA PFH's updated
+
+    if (hasCBA)
+    {
+        for (auto pfhEntry : intercept::sqf::get_variable(intercept::sqf::mission_namespace(), "cba_common_perFrameHandlerArray").to_array())
+        {
+            auto pfhEntryArray = pfhEntry.to_array();
+            // https://github.com/CBATeam/CBA_A3/blob/263286f95453697bfb296937cb1a896c7885e682/addons/common/init_perFrameHandler.sqf#L32
+            // _x params ["_function", "_delay", "_delta", "", "_args", "_handle"];
+
+            if (pfhEntryArray.front().type_enum() != game_data_type::CODE)
+            {
+                // Something is fucked
+                hasCBA = false;
+                break;
+            }
+
+            auto bodyCode = static_cast<game_data_code*>(pfhEntryArray.front().data.get());
+            if (bodyCode->instructions.empty()) {
+                continue; // lol someone added a empty PFH?
+            }
+            if (codeHasScopeInstruction(bodyCode->instructions))
+                continue;
+
+            auto& funcPath = bodyCode->instructions.front()->sdp->sourcefile;
+            auto& str = bodyCode->code_string;
+            //#TODO pass instructions to getScriptName and check if there is a "scriptName" or "scopeName" unary command call
+            r_string scriptName(getScriptName(str, funcPath, 32));
+
+            //if (scriptName.empty()) scriptName = "<unknown>";
+
+            if (bodyCode->instructions.size() > 3 && !scriptName.empty())// && scriptName != "<unknown>"
+                addScopeInstruction(bodyCode->instructions, scriptName);
+        }
+
+
+        for (auto pfhEntry : intercept::sqf::get_variable(intercept::sqf::mission_namespace(), "cba_common_waitAndExecArray").to_array())
+        {
+            auto pfhEntryArray = pfhEntry.to_array();
+            // [time, func, args]
+
+            if (pfhEntryArray.size() != 3 || pfhEntryArray[1].type_enum() != game_data_type::CODE)
+            {
+                // Something is fucked
+                hasCBA = false;
+                break;
+            }
+
+            auto bodyCode = static_cast<game_data_code*>(pfhEntryArray[1].data.get());
+            if (bodyCode->instructions.empty()) {
+                continue; // lol someone added a empty PFH?
+            }
+            if (codeHasScopeInstruction(bodyCode->instructions))
+                continue;
+
+            auto& funcPath = bodyCode->instructions.front()->sdp->sourcefile;
+            auto& str = bodyCode->code_string;
+            //#TODO pass instructions to getScriptName and check if there is a "scriptName" or "scopeName" unary command call
+            r_string scriptName(getScriptName(str, funcPath, 32));
+
+            //if (scriptName.empty()) scriptName = "<unknown>";
+
+            if (bodyCode->instructions.size() > 3 && !scriptName.empty())// && scriptName != "<unknown>"
+                addScopeInstruction(bodyCode->instructions, scriptName);
+        }
+
+
+        for (auto pfhEntry : intercept::sqf::get_variable(intercept::sqf::mission_namespace(), "cba_common_nextFrameBufferA").to_array())
+        {
+            auto pfhEntryArray = pfhEntry.to_array();
+            // [args, code]
+
+            if (pfhEntryArray.size() != 2 || pfhEntryArray[1].type_enum() != game_data_type::CODE)
+            {
+                // Something is fucked
+                hasCBA = false;
+                break;
+            }
+
+            auto bodyCode = static_cast<game_data_code*>(pfhEntryArray[1].data.get());
+            if (bodyCode->instructions.empty()) {
+                continue; // lol someone added a empty PFH?
+            }
+            if (codeHasScopeInstruction(bodyCode->instructions))
+                continue;
+
+            auto& funcPath = bodyCode->instructions.front()->sdp->sourcefile;
+            auto& str = bodyCode->code_string;
+            //#TODO pass instructions to getScriptName and check if there is a "scriptName" or "scopeName" unary command call
+            r_string scriptName(getScriptName(str, funcPath, 32));
+
+            //if (scriptName.empty()) scriptName = "<unknown>";
+
+            if (bodyCode->instructions.size() > 3 && !scriptName.empty())// && scriptName != "<unknown>"
+                addScopeInstruction(bodyCode->instructions, scriptName);
+        }
+
+        for (auto pfhEntry : intercept::sqf::get_variable(intercept::sqf::mission_namespace(), "cba_common_waitUntilAndExecArray").to_array())
+        {
+            auto pfhEntryArray = pfhEntry.to_array();
+            // [condcode, actioncode, args]
+
+            if (pfhEntryArray.size() != 3 || pfhEntryArray[1].type_enum() != game_data_type::CODE || pfhEntryArray[0].type_enum() != game_data_type::CODE)
+            {
+                // Something is fucked
+                hasCBA = false;
+                break;
+            }
+
+            for(auto& cd : {pfhEntryArray[0], pfhEntryArray[1]})
+            {
+                auto bodyCode = static_cast<game_data_code*>(cd.data.get());
+                if (bodyCode->instructions.empty()) {
+                    continue; // lol someone added a empty PFH?
+                }
+                if (codeHasScopeInstruction(bodyCode->instructions))
+                    continue;
+
+                auto& funcPath = bodyCode->instructions.front()->sdp->sourcefile;
+                auto& str = bodyCode->code_string;
+                //#TODO pass instructions to getScriptName and check if there is a "scriptName" or "scopeName" unary command call
+                r_string scriptName(getScriptName(str, funcPath, 32));
+
+                //if (scriptName.empty()) scriptName = "<unknown>";
+
+                if (bodyCode->instructions.size() > 3 && !scriptName.empty())// && scriptName != "<unknown>"
+                    addScopeInstruction(bodyCode->instructions, scriptName);
+            }
+        }
+
+    }
+
+
 }
 
 void scriptProfiler::preInit() {
