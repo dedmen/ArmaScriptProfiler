@@ -12,7 +12,6 @@
 #include <limits.h>
 #include <unistd.h>
 #include <link.h>
-#include <cstring>
 #endif
 #include "ProfilerAdapter.hpp"
 #include "AdapterArmaDiag.hpp"
@@ -1248,8 +1247,7 @@ public:
 extern "C" int iterateCallback(struct dl_phdr_info* info, size_t size, void* data) {
     std::filesystem::path sharedPath = info->dlpi_name;
     if (sharedPath.filename() == "ArmaScriptProfiler_x64.so") {
-        // native won't convert, and we don't need it to convert
-        std::memcpy(data, sharedPath.c_str(), sharedPath.native().size());
+        *static_cast<std::filesystem::path*>(data) = info->dlpi_name;
         return 0;
     }
     return 0;
@@ -1258,9 +1256,9 @@ extern "C" int iterateCallback(struct dl_phdr_info* info, size_t size, void* dat
 
 std::filesystem::path getSharedObjectPath() {
 #if __linux__
-    char pathBuffer[PATH_MAX] = { 0 };
-    dl_iterate_phdr(iterateCallback, pathBuffer);
-    return std::filesystem::path{pathBuffer};
+    std::filesystem::path path;
+    dl_iterate_phdr(iterateCallback, &path);
+    return path;
 
 #else
     wchar_t buffer[MAX_PATH] = { 0 };
