@@ -681,6 +681,8 @@ std::optional<r_string> tryGetNameFromCBACompile(game_state& state) {
     return fncname;
 }
 
+unary_function compileFinal214 = nullptr; // #TODO get rid of this at 2.14 release
+
 game_value compileRedirect2(game_state& state, game_value_parameter message) {
     if (!profiler.compileScope) {
         static r_string compileEventText("compile");
@@ -717,6 +719,38 @@ game_value compileRedirect2(game_state& state, game_value_parameter message) {
     if (bodyCode->instructions.size() > 4 && !scriptName.empty())// && scriptName != "<unknown>"
         addScopeInstruction(bodyCode->instructions, scriptName);
 
+    // HACK: CBA's OnFrame function is not a standalone function that has "compile" called on it, it is just a member variable in a function.
+    // So we use this hack here to find it
+    // Cheap size check first, string compare on every compile is meh
+    //if (funcPath.capacity() == 45 && funcPath == R"(x\cba\addons\common\init_perFrameHandler.sqf)")
+    //{
+    //    // Find the first constant instruction that pushes a piece of code, that's our OnFrame code.
+    //
+    //    for (auto& game_instruction : bodyCode->instructions)
+    //    {
+    //        if (typeid(*game_instruction.getRef()).hash_code() != 0x0a56f03038a03360)
+    //            continue;
+    //        auto* constant = static_cast<game_instruction_constant*>(game_instruction.getRef());
+    //        if (constant->value.type_enum() != game_data_type::CODE)
+    //            continue;
+    //
+    //        // First code constant, this should be it
+    //
+    //        //{
+    //        //    auto subBodyCode = static_cast<game_data_code*>(constant->value.data.get());
+    //        //    r_string funcName = "CBA_PFH_OnFrame";
+    //        //    addScopeInstruction(subBodyCode->instructions, funcName);
+    //        //
+    //        //    // HACK2, because old CBA (pre 2.14) recompiles this string while stripping all file location info (and our profiling scope), we also need to inject a manual scripted scope into it.
+    //        //
+    //        //    subBodyCode->code_string = "scriptName \"CBA_PFH_OnFrame\";" + subBodyCode->code_string;
+    //        //    __nop();
+    //        //}
+    //    }
+    //
+    //}
+
+
     return comp;
 }
 
@@ -729,13 +763,18 @@ game_value compileRedirectFinal(game_state& state, game_value_parameter message)
 
     auto tempData = GProfilerAdapter->enterScope(profiler.compileScope);
 
-    r_string str = message;
+    r_string bodyString;
+    game_data_code* bodyCode;
+    game_value resultValue = message;
+    if (message.type_enum() == game_data_type::STRING) {
 
-    auto comp = sqf::compile_final(str);
-    auto bodyCode = static_cast<game_data_code*>(comp.data.get());
-    if (bodyCode->instructions.empty()) {
-        GProfilerAdapter->leaveScope(tempData);
-        return comp;
+        bodyString = message;
+
+        auto comp = resultValue = sqf::compile_final(bodyString);
+        bodyCode = static_cast<game_data_code*>(comp.data.get());
+        if (bodyCode->instructions.empty()) {
+            GProfilerAdapter->leaveScope(tempData);
+            return comp;
     }
 
 #ifdef WITH_BROFILER
@@ -745,7 +784,19 @@ game_value compileRedirectFinal(game_state& state, game_value_parameter message)
     }
 #endif
 
-    GProfilerAdapter->leaveScope(tempData);
+        GProfilerAdapter->leaveScope(tempData);
+
+    } else if (message.type_enum() == game_data_type::CODE) {
+        //#TODO call the function directly once this was fixed with 2.14 release
+        resultValue = host::functions.invoke_raw_unary(compileFinal214, message);
+
+        bodyCode = static_cast<game_data_code*>(resultValue.data.get());
+        bodyString = bodyCode->code_string;
+    } else {
+        //#TODO call the function directly once this was fixed with 2.14 release
+        return host::functions.invoke_raw_unary(compileFinal214, message);
+    }
+
 
     auto& funcPath = bodyCode->instructions.front()->sdp->sourcefile;
 
@@ -1333,7 +1384,7 @@ void scriptProfiler::preStart() {
     static auto _profilerSetCounter = client::host::register_sqf_command("profilerSetCounter", "Set's a counter value", profilerSetCounter, game_data_type::NOTHING, game_data_type::STRING, game_data_type::SCALAR);
     static auto _profilerTime = client::host::register_sqf_command("profilerTime", "Returns the time since gamestart as [seconds, microseconds, nanoseconds]"sv, profilerTime, game_data_type::ARRAY);
 
-
+    compileFinal214 = (unary_function)host::functions.get_unary_function_typed("compilefinal"sv, "ANY"sv); //#TODO get rid at 2.14 release
 
     auto compHookDisabled = client::host::request_plugin_interface("ProfilerNoCompile", 1); //ASM will call us via interface instead
 
@@ -1341,7 +1392,7 @@ void scriptProfiler::preStart() {
         static auto _profilerCompile = client::host::register_sqf_command("compile", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
         //static auto _profilerCompile2 = client::host::register_sqf_command("compile2", "Profiler redirect", compileRedirect, game_data_type::CODE, game_data_type::STRING);
         //static auto _profilerCompile3 = client::host::register_sqf_command("compile3", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
-        static auto _profilerCompileF = client::host::register_sqf_command("compileFinal", "Profiler redirect", compileRedirectFinal, game_data_type::CODE, game_data_type::STRING);
+        static auto _profilerCompileF = client::host::register_sqf_command("compileFinal", "Profiler redirect", compileRedirectFinal, compileFinal214 ? game_data_type::ANY : game_data_type::CODE, compileFinal214 ? game_data_type::ANY : game_data_type::STRING);
 
 
         compileScriptFunc = (unary_function)host::functions.get_unary_function_typed("compilescript"sv, "ARRAY"sv);
