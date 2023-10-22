@@ -909,8 +909,7 @@ std::optional<std::string> getCommandLineParam(std::string_view needle) {
             {
                 if (json[needle.substr(1)].get<bool>()) {
                     return "true";
-                }
-                else {
+                } else {
                     return {};
                 }
             }
