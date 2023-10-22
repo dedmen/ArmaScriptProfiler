@@ -2,11 +2,16 @@
 #include <intercept.hpp>
 #include <numeric>
 #include <random>
+#include <filesystem>
+#include <fstream>
+#include <nlohmann/json.hpp>
 #ifndef __linux__
 #include <Windows.h>
 #else
 #include <signal.h>
-#include <fstream>
+#include <limits.h>
+#include <unistd.h>
+#include <link.h>
 #endif
 #include "ProfilerAdapter.hpp"
 #include "AdapterArmaDiag.hpp"
@@ -26,6 +31,7 @@ using namespace intercept;
 using namespace std::chrono_literals;
 std::chrono::high_resolution_clock::time_point startTime;
 static sqf_script_type* GameDataProfileScope_type;
+static nlohmann::json json;
 
 scriptProfiler profiler{};
 bool instructionLevelProfiling = false;
@@ -987,6 +993,25 @@ std::optional<std::string> getCommandLineParam(std::string_view needle) {
             adapterStr = adapterStr.substr(0, adapterStr.length() - 1);
         return adapterStr;
     }
+
+    if (!json.empty() && json.contains(needle.substr(1))) {
+        switch (json[needle.substr(1)].type()) {
+            case nlohmann::json::value_t::boolean:
+            {
+                if (json[needle.substr(1)].get<bool>()) {
+                    return "true";
+                } else {
+                    return {};
+                }
+            }
+            case nlohmann::json::value_t::string:
+            {
+                return json[needle.substr(1)].get<std::string>();
+            }
+            default:
+                return {};
+        }
+    }
     return {};
 }
 
@@ -1306,8 +1331,71 @@ public:
 
 #pragma endregion Instructions
 #endif
+
+
+#if __linux__
+extern "C" int iterateCallback(struct dl_phdr_info* info, size_t size, void* data) {
+    std::filesystem::path sharedPath = info->dlpi_name;
+    if (sharedPath.filename() == "ArmaScriptProfiler_x64.so") {
+        *static_cast<std::filesystem::path*>(data) = info->dlpi_name;
+        return 0;
+    }
+    return 0;
+}
+#endif
+
+std::filesystem::path getSharedObjectPath() {
+#if __linux__
+    std::filesystem::path path;
+    dl_iterate_phdr(iterateCallback, &path);
+    return path;
+
+#else
+    wchar_t buffer[MAX_PATH] = { 0 };
+    HMODULE handle = nullptr;
+    if(GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            reinterpret_cast<LPCWSTR>(&getSharedObjectPath), &handle) == 0) {
+        sqf::diag_log("getSharedObjectPath: GetModuleHandle failed");
+        return std::filesystem::path{};
+    }
+
+    DWORD len = GetModuleFileNameW(handle, buffer, MAX_PATH);
+    if (len == 0) {
+        return std::filesystem::path{};
+    }
+    return std::filesystem::path{buffer};
+#endif
+}
+
+std::filesystem::path findConfigFilePath() {
+
+    std::filesystem::path path = getSharedObjectPath();
+    path = path.parent_path().parent_path();
+
+    std::filesystem::path dirName{ "config"sv };
+    std::filesystem::path fileName{ "parameters.json"sv };
+    path = path / dirName / fileName;
+
+    return path;
+}
+
 void scriptProfiler::preStart() {
     sqf::diag_log("Arma Script Profiler preStart");
+
+    std::filesystem::path filePath = findConfigFilePath();
+    
+    if (!filePath.empty() && std::filesystem::exists(filePath)) {
+        sqf::diag_log("ASP: Found a Configuration File"sv);
+        std::ifstream file(filePath);
+        try {
+            json = nlohmann::json::parse(file);
+        }
+        catch (nlohmann::json::exception& error) {
+            // log error, set parameterFile false, and continue by using getCommandLineParam
+            sqf::diag_log(error.what());
+             
+        }
+    }
 
     auto startAdapter = getCommandLineParam("-profilerAdapter"sv);
 
@@ -1319,7 +1407,6 @@ void scriptProfiler::preStart() {
             auto chromeAdapter = std::make_shared<AdapterChrome>();
             GProfilerAdapter = chromeAdapter;
             sqf::diag_log("ASP: Selected Chrome Adapter"sv);
-
             auto chromeOutput = getCommandLineParam("-profilerOutput"sv);
             if (chromeOutput)
                 chromeAdapter->setTargetFile(*chromeOutput);
