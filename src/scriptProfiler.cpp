@@ -1505,7 +1505,7 @@ void scriptProfiler::preStart() {
     static auto _profilerSetCounter = client::host::register_sqf_command("profilerSetCounter", "Set's a counter value", profilerSetCounter, game_data_type::NOTHING, game_data_type::STRING, game_data_type::SCALAR);
     static auto _profilerTime = client::host::register_sqf_command("profilerTime", "Returns the time since gamestart as [seconds, microseconds, nanoseconds]"sv, profilerTime, game_data_type::ARRAY);
 
-    compileFinal214 = (unary_function)host::functions.get_unary_function_typed("compilefinal"sv, "ANY"sv); //#TODO get rid at 2.14 release
+    compileFinal214 = (unary_function)host::functions.get_unary_function_typed("compilefinal"sv, "CODE"sv); //#TODO get rid at 2.14 release
 
     auto compHookDisabled = client::host::request_plugin_interface("ProfilerNoCompile", 1); //ASM will call us via interface instead
 
@@ -1513,7 +1513,7 @@ void scriptProfiler::preStart() {
         static auto _profilerCompile = client::host::register_sqf_command("compile", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
         //static auto _profilerCompile2 = client::host::register_sqf_command("compile2", "Profiler redirect", compileRedirect, game_data_type::CODE, game_data_type::STRING);
         //static auto _profilerCompile3 = client::host::register_sqf_command("compile3", "Profiler redirect", compileRedirect2, game_data_type::CODE, game_data_type::STRING);
-        static auto _profilerCompileF = client::host::register_sqf_command("compileFinal", "Profiler redirect", compileRedirectFinal, compileFinal214 ? game_data_type::ANY : game_data_type::CODE, compileFinal214 ? game_data_type::ANY : game_data_type::STRING);
+        static auto _profilerCompileF = client::host::register_sqf_command("compileFinal", "Profiler redirect", compileRedirectFinal, game_data_type::CODE, game_data_type::CODE);
 
 
         compileScriptFunc = (unary_function)host::functions.get_unary_function_typed("compilescript"sv, "ARRAY"sv);
