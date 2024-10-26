@@ -10,7 +10,8 @@ enum TracyParams {
 	TP_NetworkProfilerLogPacketContent,
 	TP_EngineProfilingEnabled,
 	TP_InstructionProfilingEnabled,
-	TP_InstructionGetVarCallstackEnabled
+	TP_InstructionGetVarCallstackEnabled,
+	TP_EngineProfilingMainThreadOnly
 };
 
 
@@ -23,11 +24,15 @@ public:
 	std::shared_ptr<ScopeInfo> createScope(intercept::types::r_string name, intercept::types::r_string filename,
 		uint32_t fileline) override;
 	std::shared_ptr<ScopeTempStorage> enterScope(std::shared_ptr<ScopeInfo> scope) override;
+	// The NoStorage functions can only be used if they are always paired up correctly and in correct order. Cannot leave a scope that was never entered
+	void enterScopeNoStorage(std::shared_ptr<ScopeInfo> scope);
 	std::shared_ptr<ScopeTempStorage> enterScope(std::shared_ptr<ScopeInfo> scope, uint64_t threadID) override;
 	std::shared_ptr<ScopeTempStorage> enterScope(std::shared_ptr<ScopeInfo> scope, ScopeWithCallstack cs) override;
 	void leaveScope(std::shared_ptr<ScopeTempStorage> tempStorage) override;
+	void leaveScopeNoStorage(uint64_t time = -1);
 	void setName(std::shared_ptr<ScopeTempStorage> tempStorage, const intercept::types::r_string& name) override;
 	void setDescription(std::shared_ptr<ScopeTempStorage> tempStorage, const intercept::types::r_string& descr) override;
+	void setDescriptionNoStorage(const intercept::types::r_string& descr);
 	void addLog(intercept::types::r_string message) override;
     void setCounter(intercept::types::r_string name, float val) override;
     void setCounter(const char* name, float val) const;
@@ -38,6 +43,9 @@ public:
 	static void sendCallstack(intercept::types::auto_array<std::pair<intercept::types::r_string, uint32_t>>& cs);
 
 	static void addParameter(uint32_t idx, const char* name, bool isBool, int32_t val);
+
+	static void SwitchToFiber(const char* name);
+	static void LeaveFiber();
 
 private:
 	static void ensureReady();

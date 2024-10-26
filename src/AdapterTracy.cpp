@@ -2,6 +2,7 @@
 
 #define TRACY_ENABLE
 #define TRACY_ON_DEMAND
+#define TRACY_FIBERS
 #include <TracyClient.cpp>
 #include <Tracy.hpp>
 #include <unordered_set>
@@ -28,6 +29,7 @@ extern bool EngineProfilingEnabled;
 extern bool instructionLevelProfiling;
 extern bool InstructionCallstack;
 extern bool logPacketContent;
+extern bool checkMainThread;
 
 void TracyParameterUpdated(uint32_t idx, int32_t val) {
     switch (idx) {
@@ -48,6 +50,9 @@ void TracyParameterUpdated(uint32_t idx, int32_t val) {
             break;
         case TP_InstructionGetVarCallstackEnabled:
             InstructionCallstack = val != 0;
+            break;
+        case TP_EngineProfilingMainThreadOnly:
+            checkMainThread = val != 0;
             break;
     }
 
@@ -95,6 +100,24 @@ std::shared_ptr<ScopeTempStorage> AdapterTracy::enterScope(std::shared_ptr<Scope
     return ret;
 }
 
+void AdapterTracy::enterScopeNoStorage(std::shared_ptr<ScopeInfo> scope)
+{
+    auto info = std::dynamic_pointer_cast<ScopeInfoTracy>(scope);
+    if (!info || !isConnected()) return; //#TODO debugbreak? log error?
+    ensureReady();
+
+    // Tracy code inlined, in a way such that we don't even need tempStorage
+    using namespace tracy;
+
+    const SourceLocationData* srcloc = &info->info;
+
+    TracyQueuePrepare(QueueType::ZoneBegin);
+    MemWrite(&item->zoneBegin.time, Profiler::GetTime());
+    MemWrite(&item->zoneBegin.srcloc, (uint64_t)srcloc);
+    TracyQueueCommit(zoneBeginThread);
+
+}
+
 std::shared_ptr<ScopeTempStorage> AdapterTracy::enterScope(std::shared_ptr<ScopeInfo> scope, uint64_t threadID) {
     return enterScope(scope);
     //auto info = std::dynamic_pointer_cast<ScopeInfoTracy>(scope);
@@ -117,8 +140,17 @@ std::shared_ptr<ScopeTempStorage> AdapterTracy::enterScope(std::shared_ptr<Scope
 void AdapterTracy::leaveScope(std::shared_ptr<ScopeTempStorage> tempStorage) {
     auto tmpStorage = std::dynamic_pointer_cast<ScopeTempStorageTracy>(tempStorage);
     if (!tmpStorage) return; //#TODO debugbreak? log error?
-
+    
     tmpStorage->zone.end(); //zone destructor ends zone
+}
+
+void AdapterTracy::leaveScopeNoStorage(uint64_t time)
+{
+    // Tracy code inlined, in a way such that we don't even need tempStorage
+    using namespace tracy;
+    TracyQueuePrepare(QueueType::ZoneEnd);
+    MemWrite(&item->zoneEnd.time, time == -1 ? Profiler::GetTime() : time);
+    TracyQueueCommit(zoneEndThread);
 }
 
 void AdapterTracy::setName(std::shared_ptr<ScopeTempStorage> tempStorage, const intercept::types::r_string& name) {
@@ -130,7 +162,23 @@ void AdapterTracy::setName(std::shared_ptr<ScopeTempStorage> tempStorage, const 
 void AdapterTracy::setDescription(std::shared_ptr<ScopeTempStorage> tempStorage, const intercept::types::r_string& descr) {
     auto tmpStorage = std::dynamic_pointer_cast<ScopeTempStorageTracy>(tempStorage);
     if (!tmpStorage) return; //#TODO debugbreak? log error?
+
     tmpStorage->zone.Text(descr.c_str(), descr.length());
+}
+
+void AdapterTracy::setDescriptionNoStorage(const intercept::types::r_string& descr)
+{
+    // Tracy code inlined, in a way such that we don't even need tempStorage
+    using namespace tracy;
+
+    const char* txt = descr.c_str();
+    size_t size = descr.length();
+    auto ptr = (char*)tracy_malloc(size);
+    memcpy(ptr, txt, size);
+    TracyQueuePrepare(QueueType::ZoneText);
+    MemWrite(&item->zoneTextFat.text, (uint64_t)ptr);
+    MemWrite(&item->zoneTextFat.size, (uint16_t)size);
+    TracyQueueCommit(zoneTextFatThread);
 }
 
 void AdapterTracy::addLog(intercept::types::r_string message) {
@@ -212,6 +260,8 @@ void AdapterTracy::sendCallstack(intercept::types::auto_array<std::pair<intercep
     assert(dst - ptr == spaceNeeded + 4);
 
 
+    using namespace tracy;
+
     // inlined macro TracyQueuePrepare
     tracy::moodycamel::ConcurrentQueueDefaultTraits::index_t __magic;
     auto __token = tracy::GetToken();
@@ -229,6 +279,16 @@ void AdapterTracy::sendCallstack(intercept::types::auto_array<std::pair<intercep
 
 void AdapterTracy::addParameter(uint32_t idx, const char* name, bool isBool, int32_t val) {
     TracyParameterSetup(idx, name, isBool, val);
+}
+
+void AdapterTracy::SwitchToFiber(const char* name)
+{
+    TracyFiberEnter(name);
+}
+
+void AdapterTracy::LeaveFiber()
+{
+    TracyFiberLeave;
 }
 
 void AdapterTracy::ensureReady() {

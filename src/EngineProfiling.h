@@ -10,7 +10,7 @@ public:
 	ArmaProf* boss;
 	const char* name;
 	const char* cat;
-	int slot, stuff2;
+	int slot, scale;
 
 	bool shouldTime();
 	
@@ -78,14 +78,13 @@ public:
 	int64_t ouf5;
 	int64_t ouf6;
 	int blios;
-	intercept::types::r_string blip;
-	float blop;
-
-    float dummy
 #ifndef __linux__
-	, dummy2, dummy3
+	uint64_t dummy; //no idea what dis is.. Stuff above is probably wrong somewhere
 #endif
-	;//no idea what dis is.. Stuff above is probably wrong somewhere
+
+	intercept::types::r_string slowFrameScopeFilter; // 0x110 slow frame scope filter name
+	float slowFrameThreshold; // 0x118 slow frame capture threshold
+	uint32_t slowFrameOffset; // 0x11C slow frame offset
 
     bool forceCapture;
     bool capture;

@@ -1455,10 +1455,10 @@ void scriptProfiler::preStart() {
         } else {
             engineProf = std::make_shared<EngineProfiling>();
 
-            if (!getCommandLineParam("-profilerEngineThreads"sv)) {
-                engineProf->setMainThreadOnly();
-                diag_log("ASP: Engine profiler main thread only mode"sv);
-            }
+            //if (!getCommandLineParam("-profilerEngineThreads"sv)) {
+            //    engineProf->setMainThreadOnly();
+            //    diag_log("ASP: Engine profiler main thread only mode"sv);
+            //}
 
             if (!getCommandLineParam("-profilerEngineDoFile"sv)) {
                 engineProf->setNoFile();
