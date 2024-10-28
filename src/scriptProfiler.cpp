@@ -983,15 +983,18 @@ std::string get_command_line() {
 }
 
 std::optional<std::string> getCommandLineParam(std::string_view needle) {
-    std::string commandLine = get_command_line();
+    std::string commandLineF = get_command_line();
+    std::string_view commandLine(commandLineF);
     const auto found = commandLine.find(needle);
     if (found != std::string::npos) {
-        const auto spacePos = commandLine.find(' ', found + needle.length() + 1);
-        const auto valueLength = spacePos - (found + needle.length() + 1);
-        auto adapterStr = commandLine.substr(found + needle.length() + 1, valueLength);
-        if (adapterStr.back() == '"')
-            adapterStr = adapterStr.substr(0, adapterStr.length() - 1);
-        return adapterStr;
+        auto parameter = commandLine.substr(found);
+
+        // Find end of parameter
+        parameter = parameter.substr(0, parameter.find(' '));
+        auto adapterStr = parameter.substr(std::min(parameter.length(), needle.length() + 1));
+        //if (adapterStr.back() == '"') // Filtering away quotes, but we don't do that anymore
+        //    adapterStr = adapterStr.substr(0, adapterStr.length() - 1);
+        return std::string(adapterStr);
     }
 
     if (!json.empty() && json.contains(needle.substr(1))) {
