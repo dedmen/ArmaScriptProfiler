@@ -27,11 +27,13 @@ extern "C" {
     void afterAlloc() {
         auto tracyProf = std::reinterpret_pointer_cast<AdapterTracy>(GProfilerAdapter);
         tracyProf->setCounter(allocalloctmp->_allocName, (int64_t)allocalloctmp->allocated_count);
+        //TracyAllocN(ptr, size, allocalloctmp->_allocName)
     }
 
     void afterFree() {
         auto tracyProf = std::reinterpret_pointer_cast<AdapterTracy>(GProfilerAdapter);
         tracyProf->setCounter(freealloctmp->_allocName, (int64_t)freealloctmp->allocated_count);
+        //TracyFreeN(ptr, allocalloctmp->_allocName)
     }
 
 
@@ -49,6 +51,13 @@ void FAllocHook::init() {
 
     auto FreeF = poolDealloc; // We inject after the null check
     engineFree = hooks.placeHookTotalOffs(FreeF + 0x9, reinterpret_cast<uintptr_t>(engineFreeRedir))+1;
+
+    //for (rv_pool_allocator* alloc : intercept::client::host::functions.get_engine_allocator()->_poolAllocs)
+    //{
+    //    TracyPlotConfig(alloc->_allocName, tracy::PlotFormatType::Number, true, true, 0);
+    //}
+
+
     //
     //__debugbreak();
 #endif
