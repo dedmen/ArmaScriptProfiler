@@ -83,6 +83,7 @@ bool PCounter::shouldTime() {
     if (cat && cat[0] == 'd' && cat[1] == 'r' && cat[2] == 'w') return false; //drw
     if (cat && cat[0] == 'd' && cat[1] == 'd' && cat[2] == '1') return false; //dd11
     if (cat && cat[0] == 't' && cat[1] == 'e' && cat[2] == 'x' && cat[3] == 0) return false; //tex
+    if (cat && cat[0] == 'o' && cat[1] == 'g' && cat[2] == 'g' && cat[3] == 0) return false; //ogg jumps between new/different threads alot
     if (name && name[0] == 'I' && name[1] == 'G' && name[2] == 'S' && name[3] == 'M') return false; //IGSMM no idea what that is, but generates a lot of calls
     if (name && name[0] == 'm' && name[1] == 'a' && name[2] == 'n' && name[3] == 'C') return false; //Man update error. calltime is about constant and uninteresting
 
@@ -349,6 +350,8 @@ SwitchToFiberReplacement(
 
 void EngineProfiling::init() {
 
+    isMainThread = true;
+
     tracyConnected = AdapterTracy::isConnected();
     tracyConnectionChanged.connect([](bool state)
         {
@@ -414,7 +417,6 @@ void EngineProfiling::init() {
 
 void EngineProfiling::setMainThreadOnly() {
     checkMainThread = true;
-    isMainThread = true;
 }
 
 void EngineProfiling::setNoFile() {

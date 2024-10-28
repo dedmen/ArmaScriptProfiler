@@ -6,7 +6,7 @@ set(LIB_BASE_PATH "${CMAKE_SOURCE_DIR}/lib")
 
 set(INTERCEPT_INCLUDE_PATH "${INTERCEPT_CLIENT_PATH}/headers" "${INTERCEPT_CLIENT_PATH}/headers/shared" "${INTERCEPT_CLIENT_PATH}/headers/client/" "${INTERCEPT_CLIENT_PATH}/headers/client/sqf")
 set(BROFILER_INCLUDE_PATH "${BROFILER_BASE_PATH}/BrofilerCore" "${BROFILER_BASE_PATH}/ThirdParty/TaskScheduler/Scheduler/Include")
-set(TRACY_INCLUDE_PATH "${CMAKE_SOURCE_DIR}/tracy")
+set(TRACY_INCLUDE_PATH "${CMAKE_SOURCE_DIR}/tracy/public")
 set(JSON_INCLUDE_PATH "${LIB_BASE_PATH}/json/single_include")
 
 if(USE_64BIT_BUILD)
@@ -76,6 +76,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${JSON_INCLUDE_PATH} )
 target_link_libraries (${INTERCEPT_PLUGIN_NAME} ${CMAKE_THREAD_LIBS_INIT})
 
 target_link_libraries(${INTERCEPT_PLUGIN_NAME} ${LINK_LIBS})
+#target_link_libraries(${INTERCEPT_PLUGIN_NAME} PUBLIC Tracy::TracyClient) # Tracy compiles it as MD instead of MT
 
 set_target_properties(${INTERCEPT_PLUGIN_NAME} PROPERTIES PREFIX "")
 set_target_properties(${INTERCEPT_PLUGIN_NAME} PROPERTIES FOLDER ArmaScriptProfiler)

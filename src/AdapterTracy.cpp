@@ -1,10 +1,16 @@
 #include "AdapterTracy.hpp"
 
+// They are set by cmake
 #define TRACY_ENABLE
 #define TRACY_ON_DEMAND
-#define TRACY_FIBERS
-#include <TracyClient.cpp>
-#include <Tracy.hpp>
+#define TRACY_FIBERS // Arma coroutines(and might use it for scheduled scripts?)
+#define TRACY_NO_CALLSTACK // This is for native profiling, which we aren't doing
+#define TRACY_NO_CODE_TRANSFER
+#define TRACY_NO_SAMPLING // No need, too much extra data
+#define TRACY_NO_SYSTEM_TRACING // No need, too much extra data
+#define TRACY_NO_VSYNC_CAPTURE // Doesn't compile, probably too old win SDK version?
+#include <TracyClient.cpp> // CMake does it
+#include <tracy/Tracy.hpp>
 #include <unordered_set>
 #include <string_view>
 //#TODO libpthread and libdl on linux
@@ -31,7 +37,7 @@ extern bool InstructionCallstack;
 extern bool logPacketContent;
 extern bool checkMainThread;
 
-void TracyParameterUpdated(uint32_t idx, int32_t val) {
+void TracyParameterUpdated(void* data, uint32_t idx, int32_t val) {
     switch (idx) {
         case TP_OmitFilePath:
             GProfilerAdapter->setOmitFilePaths(val != 0);
@@ -61,12 +67,12 @@ void TracyParameterUpdated(uint32_t idx, int32_t val) {
 AdapterTracy::AdapterTracy() {
     type = AdapterType::Tracy;
 
-    TracyParameterRegister(TracyParameterUpdated);
+    TracyParameterRegister(TracyParameterUpdated, nullptr);
 }
 
 AdapterTracy::~AdapterTracy() {
-    tracy::s_profiler.RequestShutdown();
-    if (!tracy::s_profiler.HasShutdownFinished())
+    tracy::GetProfiler().RequestShutdown();
+    if (!tracy::GetProfiler().HasShutdownFinished())
         std::this_thread::sleep_for(5s); //If this doesn't cut it, then F you. HasShutdownFinished broke and never turned true so this is the fix now.
 }
 
@@ -124,7 +130,7 @@ std::shared_ptr<ScopeTempStorage> AdapterTracy::enterScope(std::shared_ptr<Scope
     //if (!info || !isConnected()) return nullptr; //#TODO debugbreak? log error?
     //ensureReady();
     //
-    //auto ret = std::make_shared<ScopeTempStorageTracy>(&info->info, threadID);
+    //auto ret = std::make_shared<ScopeTempStorageTracy>(&info->info, tracy::t_withThreadId{threadID});
     //return ret;
 }
 
@@ -183,15 +189,19 @@ void AdapterTracy::setDescriptionNoStorage(const intercept::types::r_string& des
 
 void AdapterTracy::addLog(intercept::types::r_string message) {
     if (message.empty()) return;
-    tracy::Profiler::Message(message.c_str(), message.length());
+    tracy::Profiler::Message(message.c_str(), message.length(), 0);
 }
 
 void AdapterTracy::setCounter(intercept::types::r_string name, float val) {
-    counterCache.insert(name);
+    counterCache.insert(name); // The name needs to be kept alive, tracy will async request it
     tracy::Profiler::PlotData(name.c_str(), val);
 }
 
 void AdapterTracy::setCounter(const char* name, float val) const {
+    tracy::Profiler::PlotData(name, val);
+}
+
+void AdapterTracy::setCounter(const char* name, int64_t val) const {
     tracy::Profiler::PlotData(name, val);
 }
 
@@ -202,7 +212,7 @@ std::shared_ptr<ScopeInfo> AdapterTracy::createScopeStatic(const char* name, con
 }
 
 bool AdapterTracy::isConnected() {
-    return tracy::s_profiler.IsConnected();
+    return tracy::GetProfiler().IsConnected();
 }
 
 
@@ -292,11 +302,9 @@ void AdapterTracy::LeaveFiber()
 }
 
 void AdapterTracy::ensureReady() {
-    if (tracy::s_token.ptr) return;
-
-    tracy::rpmalloc_thread_initialize();
-    tracy::s_token_detail = tracy::moodycamel::ProducerToken(tracy::s_queue);
-    tracy::s_token = tracy::ProducerWrapper{tracy::s_queue.get_explicit_producer(tracy::s_token_detail) };
-
-
+    //if (tracy::s_token.ptr) return;
+    //
+    //tracy::rpmalloc_thread_initialize();
+    //tracy::s_token_detail = tracy::moodycamel::ProducerToken(tracy::s_queue);
+    //tracy::s_token = tracy::ProducerWrapper{tracy::s_queue.get_explicit_producer(tracy::s_token_detail) };
 }

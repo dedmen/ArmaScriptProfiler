@@ -45,4 +45,18 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_SUPPRESS_REGENERATION true)
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
+
+set(TRACY_ENABLE ON)
+set(TRACY_ON_DEMAND ON)
+set(TRACY_NO_CALLSTACK ON) # This is for native profiling, which we aren't doing
+set(TRACY_NO_CODE_TRANSFER ON)
+set(TRACY_NO_SAMPLING ON) # No need, too much extra data
+set(TRACY_NO_SYSTEM_TRACING ON) # No need, too much extra data
+set(TRACY_FIBERS ON) # Arma coroutines (and might use it for scheduled scripts?)
+#set(TRACY_NO_CRASH_HANDLER ON) # Might interfere with Arma's handler?
+set(TRACY_NO_VSYNC_CAPTURE ON) # Doesn't compile, probably too old win SDK version?
+
+add_subdirectory (tracy)
+
 add_subdirectory(src)
+

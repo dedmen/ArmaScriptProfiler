@@ -35,7 +35,8 @@ public:
 	void setDescriptionNoStorage(const intercept::types::r_string& descr);
 	void addLog(intercept::types::r_string message) override;
     void setCounter(intercept::types::r_string name, float val) override;
-    void setCounter(const char* name, float val) const;
+	void setCounter(const char* name, float val) const;
+	void setCounter(const char* name, int64_t val) const;
 
 	std::shared_ptr<ScopeInfo> createScopeStatic(const char* name, const char* filename, uint32_t fileline) const;
 	static bool isConnected();
