@@ -857,7 +857,8 @@ game_value callExtensionRedirect(game_state&, game_value_parameter ext, game_val
 
     auto tempData = GProfilerAdapter->enterScope(profiler.callExtScope);
 
-    //GProfilerAdapter->setDescription(tempData, msg);
+    GProfilerAdapter->setName(tempData, ext);
+    GProfilerAdapter->setDescription(tempData, msg);
 
     auto res = sqf::call_extension(ext,msg);
 
@@ -1039,7 +1040,7 @@ namespace intercept::__internal {
     private:
         std::array<size_t,
 #if _WIN64 || __X86_64__
-            10
+            9
 #else
 #ifdef __linux__
             8
@@ -1194,7 +1195,7 @@ public:
         typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
 
         if (instructionLevelProfiling) {
-            auto instructionName = _operators->_name;
+            auto instructionName = _operators->gsFuncBase::_name;
 
             auto found = descriptions.find(reinterpret_cast<size_t>(instructionName.data()));
             if (found == descriptions.end()) {
@@ -1226,7 +1227,7 @@ public:
         typedef bool(__thiscall *OrigEx)(game_instruction*, game_state&, vm_context&);
         
         if (instructionLevelProfiling) {
-            auto instructionName = _functions->_name;
+            auto instructionName = _functions->gsFuncBase::_name;
 
             auto found = descriptions.find(reinterpret_cast<size_t>(instructionName.data()));
             if (found == descriptions.end()) {
