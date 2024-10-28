@@ -136,11 +136,12 @@ _TEXT    SEGMENT
 	doEngineAlloc PROC
 
 		;fixup
-		push    rbx
+		mov     [rsp+8], rbx
+		mov     [rsp+10h], rsi
+		push    rdi
 		sub     rsp, 20h
 		inc     dword ptr [rcx+60h]
-		mov     rax, [rcx+8]
-		mov     rbx, rcx
+
 		jmp		engineAlloc;
 
     doEngineAlloc ENDP
@@ -148,10 +149,13 @@ _TEXT    SEGMENT
 	doEngineFree PROC
 
 		;fixup
+
 		push    rbx
 		sub     rsp, 20h
 		movsxd  rax, dword ptr [rcx+58h]
-		mov     [rsp+30h], rdi
+		mov     rbx, rcx
+		dec     rax
+
 		jmp		engineFree;
     doEngineFree ENDP
 
@@ -159,6 +163,9 @@ _TEXT    SEGMENT
 	;##########
     PUBLIC engineAllocRedir
     engineAllocRedir PROC
+
+		sub rsp, 20h ; Stack saver, otherwise we corrupt smth
+
 		mov allocalloctmp, rcx; get rid of this and just keep rcx on stack
 		call doEngineAlloc;
 		push rax;
@@ -175,12 +182,17 @@ _TEXT    SEGMENT
 		pop rcx;
 		pop rax;
 
+		add rsp, 20h ; Undo the stack saver
+
 		ret
     engineAllocRedir ENDP
 
 	;##########
     PUBLIC engineFreeRedir
     engineFreeRedir PROC
+
+		;sub rsp, 40h ; Stack saver, otherwise we corrupt smth
+
 		mov freealloctmp, rcx; get rid of this, I keep track of rcx now anyway
 		push rax;
 		push r8;
@@ -194,6 +206,9 @@ _TEXT    SEGMENT
 		pop rcx;
 		pop r8;
 		pop rax;
+
+		;add rsp, 40h ; Undo the stack saver
+
 		ret
     engineFreeRedir ENDP
 
