@@ -1,0 +1,7 @@
+
+
+
+namespace ScheduledProfiler
+{
+    void init();
+}

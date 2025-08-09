@@ -215,6 +215,56 @@ _TEXT    SEGMENT
 
 
 
+	EXTERN vmSimulateJmpback:						qword
+
+	PUBLIC sVMSimStableReal
+	sVMSimStableReal PROC
+		;fixup
+		push    rbx
+		sub     rsp, 70h
+		cmp     byte ptr [rcx+32h], 0
+		mov     rbx, rcx
+		movaps  xmmword ptr [rsp+50h], xmm6
+		movaps  xmm6, xmm2
+
+        jmp     vmSimulateJmpback;
+    sVMSimStableReal ENDP
+
+
+
+	PUBLIC sVMSimProfReal
+	sVMSimProfReal PROC
+		;fixup
+		mov     r11, rsp
+		push    rbp
+		push    rbx
+		lea     rbp, [r11-5Fh]
+		sub     rsp, 0A8h
+		cmp     byte ptr [rcx+32h], 0
+		mov     rbx, rcx
+		movaps  xmmword ptr [r11-38h], xmm6
+		movaps  xmm6, xmm2
+
+        jmp     vmSimulateJmpback;
+    sVMSimProfReal ENDP
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 _TEXT    ENDS

@@ -25,6 +25,7 @@
 #include <string>
 #include "NetworkProfiler.hpp"
 #include <pointers.hpp>
+#include "scheduledProfiler.hpp"
 
 
 using namespace intercept;
@@ -429,6 +430,13 @@ std::string getScriptName(const r_string& str, const r_string& filePath, uint32_
     //if (str.find("createProfileScope", 0) != -1) return "<unknown>"; //Don't remember why I did this :D
 
     if (returnFirstLineIfNoName) {
+
+        size_t offset = 0;
+
+        while (offset < str.capacity() && std::isspace(str.c_str()[offset])) // Find first non-whitespace char, skip starting empty line
+            ++offset;
+
+
         auto linebreak = str.find("\n", 0);
         if (linebreak < 20) {
             auto linebreak2 = str.find("\n", linebreak + 1);
@@ -1640,6 +1648,9 @@ void scriptProfiler::preStart() {
         //delete ins;
     }
 #endif
+
+
+    ScheduledProfiler::init();
 }
 
 

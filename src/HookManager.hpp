@@ -14,6 +14,7 @@ enum class hookTypes {
     scopeCompleted,
     frameEnd,
     compileCacheIns,
+    sVMSimulate,
     End
 };
 
