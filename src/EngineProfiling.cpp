@@ -102,6 +102,10 @@ bool PCounter::shouldTime() {
     //make sure the add is not inside the scope
     auto p = std::make_pair(this, slot);
     auto ins = openScopes->insert_or_assign(p,nullptr);
+
+    if (!ins.second) // We replaced an existing scope, this scope was opened twice. We currently cannot handle that (We would only close one of the two) For now just don't allow that to happen.
+        return false;
+
     auto tmp = tracyProf->enterScope(found->second);
     //if (tmp) // Entering scope might fail? Only really if the source location data is invalid
         ins.first->second = tmp;
@@ -136,9 +140,11 @@ void ArmaProf::frameEnd(float fps, float time, int smth) {
 
 void ArmaProf::scopeCompleted(int64_t start, int64_t end, intercept::types::r_string* extraInfo, PCounter* counter) {
 #if OPEN_SCOPE_MAP
-    if (!openScopes || openScopes->empty() || !counter) return;
+    if (!openScopes || openScopes->empty() || !counter)
+        return;
     auto found = openScopes->find({ counter, counter->slot });
-    if (found == openScopes->end()) return;
+    if (found == openScopes->end())
+        return;
     if (extraInfo && !extraInfo->empty())
         GProfilerAdapter->setDescription(found->second, *extraInfo);
     GProfilerAdapter->leaveScope(found->second);
@@ -245,8 +251,8 @@ HookManager::Pattern pat_doEnd{
 //};
 
 HookManager::Pattern pat_scopeCompleted{
-    "xxxxxxxxxxxxxxxx????xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx?xxxxxxxxx????xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx????xxx????xxxxxx????"sv,
-    "\x40\x53\x56\x41\x54\x41\x55\x41\x57\x48\x83\xEC\x20\x48\x8B\x81\x00\x00\x00\x00\x49\x8B\xF0\x48\x3B\xD0\x4D\x8B\xE9\x48\x8B\xD9\x48\x0F\x4C\xD0\x48\xC1\xF8\x04\x48\xC1\xFA\x04\x48\xC1\xFE\x04\x44\x8B\xE2\x44\x2B\xE0\x2B\xF2\x48\x8B\x44\x24\x00\x4C\x63\x78\x18\x45\x85\xFF\x0F\x88\x00\x00\x00\x00\x8B\x41\x68\x8B\xC8\xD1\xF9\x66\x0F\x6E\xC6\x0F\x5B\xC0\x66\x0F\x6E\xD0\x8B\x43\x6C\x2B\xC1\x0F\x5B\xD2\x66\x0F\x6E\xC8\x42\x8D\x04\x26\xF3\x0F\x59\xD0\x66\x0F\x6E\xC0\x0F\x5B\xC0\x0F\x5B\xC9\xF3\x0F\x59\xC8\x0F\x2F\xD1\x73\x3C\x80\x3B\x00\x0F\x84\x00\x00\x00\x00\x49\x69\xD7\x00\x00\x00\x00\x48\x03\x53\x20\x0F\x84\x00\x00\x00\x00"sv
+    "xxxx?xxxxxxxxxxxxx????xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx?xxx?xxxxx????xx?xxxxx?xxxxxxxxx?xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx?xxxxxx????xxxxxxxxxx?xx????xxx?xxxxx"sv,
+    "\x48\x89\x74\x24\x00\x41\x54\x41\x56\x41\x57\x48\x83\xEC\x20\x48\x8B\x81\x00\x00\x00\x00\x49\x8B\xF0\x48\x3B\xD0\x4D\x8B\xE1\x4C\x8B\xC1\x48\x0F\x4C\xD0\x48\xC1\xF8\x04\x48\xC1\xFA\x04\x48\xC1\xFE\x04\x44\x8B\xFA\x44\x2B\xF8\x2B\xF2\x48\x8B\x44\x24\x00\x4C\x63\x70\x00\x45\x85\xF6\x0F\x88\x00\x00\x00\x00\x8B\x51\x00\x0F\x57\xD2\x8B\x49\x00\x0F\x57\xC9\xD1\xEA\x90\x41\x8B\x40\x00\x48\x2B\xCA\x66\x0F\x6E\xC6\x0F\x5B\xC0\xF3\x48\x0F\x2A\xD0\x42\x8D\x04\x3E\xF3\x48\x0F\x2A\xC9\xF3\x0F\x59\xD0\x66\x0F\x6E\xC0\x0F\x5B\xC0\xF3\x0F\x59\xC8\x0F\x2F\xD1\x73\x00\x41\x80\x38\x00\x0F\x84\x00\x00\x00\x00\x49\x69\xD6\xDC\x00\x00\x00\x49\x03\x50\x00\x0F\x84\x00\x00\x00\x00\x0F\x0D\x4A\x00\x66\x0F\x1F\x44\x00"sv
 };
 
 HookManager::Pattern pat_shouldTime{
@@ -377,7 +383,7 @@ void EngineProfiling::init() {
     //order is important
     hooks.placeHook(hookTypes::scopeCompleted, pat_scopeCompleted, reinterpret_cast<uintptr_t>(scopeCompleted), profEndJmpback, 0);
     hooks.placeHook(hookTypes::shouldTime, pat_shouldTime, reinterpret_cast<uintptr_t>(shouldTime), shouldTimeJmpback, 0);
-    hooks.placeHook(hookTypes::frameEnd, pat_frameEnd, reinterpret_cast<uintptr_t>(frameEnd), frameEndJmpback, 0);
+    //hooks.placeHook(hookTypes::frameEnd, pat_frameEnd, reinterpret_cast<uintptr_t>(frameEnd), frameEndJmpback, 0);
 #ifndef __linux__
     //hooks.placeHook(hookTypes::compileCacheIns, pat_compileCacheIns, reinterpret_cast<uintptr_t>(compileCacheIns), compileCacheInsJmpback, 0);
 #endif
