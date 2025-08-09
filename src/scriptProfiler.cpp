@@ -807,11 +807,11 @@ game_value compileRedirectFinal(game_state& state, game_value_parameter message)
 
         bodyString = message;
 
-        auto comp = resultValue = sqf::compile_final(bodyString);
-        bodyCode = static_cast<game_data_code*>(comp.data.get());
+        resultValue = sqf::compile_final(bodyString);
+        bodyCode = static_cast<game_data_code*>(resultValue.data.get());
         if (bodyCode->instructions.empty()) {
             GProfilerAdapter->leaveScope(tempData);
-            return comp;
+            return resultValue;
         }
 
 #ifdef WITH_BROFILER
@@ -829,6 +829,10 @@ game_value compileRedirectFinal(game_state& state, game_value_parameter message)
 
         bodyCode = static_cast<game_data_code*>(resultValue.data.get());
         bodyString = bodyCode->code_string;
+        if (bodyCode->instructions.empty()) {
+            GProfilerAdapter->leaveScope(tempData); //#TODO do we even need to leave this, or is it RAII?
+            return resultValue;
+        }
     } else {
         //#TODO call the function directly once this was fixed with 2.14 release
         return host::functions.invoke_raw_unary(compileFinal214, message);
