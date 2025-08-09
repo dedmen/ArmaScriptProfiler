@@ -55,6 +55,7 @@ set(TRACY_NO_SYSTEM_TRACING ON) # No need, too much extra data
 set(TRACY_FIBERS ON) # Arma coroutines (and might use it for scheduled scripts?)
 #set(TRACY_NO_CRASH_HANDLER ON) # Might interfere with Arma's handler?
 set(TRACY_NO_VSYNC_CAPTURE ON) # Doesn't compile, probably too old win SDK version?
+set(TRACY_NO_FRAME_IMAGE ON)
 
 add_subdirectory (tracy)
 
