@@ -35,7 +35,7 @@ thread_local std::unordered_map<PCounter*, std::shared_ptr<ScopeInfo>> scopeCach
 bool noFile = false;
 bool noMem = false;
 bool tracyConnected = false;
-bool checkMainThread = false;
+bool checkMainThread = true; // main thread only
 thread_local bool isMainThread = false;
 bool EngineProfilingEnabled = true;
 thread_local bool ignoreScopes = false;
@@ -377,7 +377,7 @@ void EngineProfiling::init() {
 
         // Handler for these is in TracyParameterUpdated
         tracyAdapter->addParameter(TP_EngineProfilingEnabled, "EngineProfilingEnabled", true, 1);
-        tracyAdapter->addParameter(TP_EngineProfilingMainThreadOnly, "EngineProfilingMainThreadOnly", true, 0);
+        tracyAdapter->addParameter(TP_EngineProfilingMainThreadOnly, "EngineProfilingMainThreadOnly", true, 1);
     }
 
     //order is important
